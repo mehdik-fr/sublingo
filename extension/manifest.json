@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Sublingo",
+  "description": "Prototype extension for interactive language-learning subtitles.",
+  "version": "0.1.0",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:8000/demo/*",
+        "http://127.0.0.1:8000/demo/*",
+        "https://www.youtube.com/*"
+      ],
+      "js": ["dist/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["storage"]
+}

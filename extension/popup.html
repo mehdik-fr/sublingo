@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sublingo</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <main class="popup-shell">
+      <label class="toggle-card" for="enable-toggle">
+        <div class="toggle-copy">
+          <p class="eyebrow">Sublingo</p>
+          <h1 data-toggle-label>Sublingo is active</h1>
+          <p data-toggle-hint>Interactive subtitles are enabled on supported pages.</p>
+        </div>
+        <input id="enable-toggle" data-enable-toggle type="checkbox" />
+      </label>
+    </main>
+
+    <script src="./dist/popup.js" type="module"></script>
+  </body>
+</html>
