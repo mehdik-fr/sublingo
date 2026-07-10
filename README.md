@@ -2,7 +2,7 @@
 
 Browser extension project for learning languages through interactive subtitles.
 
-> Early-stage portfolio project. Built incrementally, with small working steps and clear documentation.
+> Early-stage project. Built incrementally, with small working steps and clear documentation.
 
 ## Goal
 
