@@ -1,0 +1,53 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sublingo Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="header">
+        <div>
+          <p class="eyebrow">Sublingo local demo</p>
+          <h1>Interactive subtitles for language learning</h1>
+        </div>
+        <span class="language-pill">FR -> KO</span>
+      </header>
+
+      <section class="player" aria-label="Sample video player">
+        <div class="video-surface">
+          <video id="sample-video" class="sample-video" controls preload="metadata">
+            <source
+              src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+              type="video/mp4"
+            />
+            <track
+              id="subtitle-track"
+              default
+              kind="subtitles"
+              label="French"
+              src="./subtitles.fr.vtt"
+              srclang="fr"
+            />
+          </video>
+
+          <div class="subtitle-layer" aria-live="polite">
+            <p id="subtitle" class="subtitle"></p>
+          </div>
+        </div>
+
+        <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+      </section>
+
+      <section class="controls" aria-label="Subtitle controls">
+        <button id="replay-video" type="button">Replay</button>
+        <button id="next-cue" type="button">Next subtitle</button>
+        <p id="context-note" class="context-note"></p>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

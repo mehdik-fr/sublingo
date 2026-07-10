@@ -1,0 +1,59 @@
+﻿# Sublingo
+
+Browser extension project for learning languages through interactive subtitles.
+
+> Early-stage portfolio project. Built incrementally, with small working steps and clear documentation.
+
+## Goal
+
+Sublingo aims to make video subtitles interactive: users can hover words or expressions to get useful language information without interrupting the video.
+
+The first target is a controlled local test page, then Chrome, then streaming platforms when the core is stable.
+
+## Local Demo
+
+A first local prototype is available in [demo/index.html](demo/index.html).
+
+It uses a hosted CC0 sample video, a local WebVTT subtitle file, and a small French/Korean dictionary to test the interaction model before building the browser extension.
+
+If you are in the folder that contains the project:
+
+```bash
+cd sublingo
+python -m http.server 8000
+```
+
+Then open:
+
+```txt
+http://localhost:8000/demo/
+```
+
+Opening `demo/index.html` directly can display the video but skip the WebVTT subtitle loading in some browsers. Use the local server during development.
+
+## Planned MVP
+
+- Chrome extension using Manifest V3
+- Subtitle detection on a local test page
+- Interactive words and expressions
+- Minimal tooltip with translation details
+- Small local French/Korean dictionary for the first version
+- Python API later for context-aware language help
+
+## Tech Direction
+
+- TypeScript for the browser extension
+- Python and FastAPI for the future NLP backend
+- Lightweight tests as soon as core parsing logic appears
+
+## Status
+
+Local subtitle prototype in progress.
+
+## Roadmap
+
+See [docs/roadmap.md](docs/roadmap.md).
+
+## License
+
+No open-source license has been selected yet. This is a personal learning project while the product direction is being explored.
