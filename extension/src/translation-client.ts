@@ -6,19 +6,14 @@ import type {
 import type { AnalyzeSubtitlesMessageResponse } from "./api/messages";
 import {
   SubtitleAnalysisQueue,
-  type SubtitleAnalysisResult,
   type SubtitleLanguagePair
 } from "./api/subtitle-analysis-queue";
+import {
+  mapSubtitleAnalysis,
+  type SubtitleTranslation
+} from "./subtitle-analysis-mapper";
 
-export type SubtitleTranslation = {
-  sourceText: string;
-  translatedText: string;
-  sourceLanguage: string;
-  targetLanguage: string;
-  provider: string;
-  isMock: boolean;
-  tokenTranslations: Record<string, string>;
-};
+export type { SubtitleTranslation } from "./subtitle-analysis-mapper";
 
 const analysisQueue = new SubtitleAnalysisQueue(sendBatchRequest);
 
@@ -28,18 +23,7 @@ export async function translateSubtitleLine(
   context: { contextBefore?: string; contextAfter?: string } = {}
 ): Promise<SubtitleTranslation> {
   const result = await analysisQueue.request({ text, ...context }, languages);
-  return toSubtitleTranslation(result);
-}
-
-export function prefetchSubtitleLine(
-  text: string,
-  languages: SubtitleLanguagePair,
-  context: { contextBefore?: string; contextAfter?: string } = {}
-): void {
-  void analysisQueue.request({ text, ...context }, languages).catch(() => {
-    // Prefetch failures are intentionally silent; the visible cue retries and
-    // reports an error through the normal translation path.
-  });
+  return mapSubtitleAnalysis(result);
 }
 
 export function clearSubtitleTranslationCache(): void {
@@ -115,44 +99,6 @@ function isTranslation(value: unknown): boolean {
     (value.kind === "contextual" || value.kind === "literal") &&
     typeof value.isPrimary === "boolean"
   );
-}
-
-function toSubtitleTranslation(result: SubtitleAnalysisResult): SubtitleTranslation {
-  const primaryTranslation =
-    result.cue.translations.find((translation) => translation.isPrimary) ??
-    result.cue.translations[0];
-  const tokenTranslations: Record<string, string> = {};
-
-  for (const segment of result.cue.segments ?? []) {
-    const segmentTranslations = segment.translations ?? [];
-    const translation =
-      segmentTranslations.find((candidate) => candidate.isPrimary) ?? segmentTranslations[0];
-
-    if (translation) {
-      tokenTranslations[normalizeToken(segment.surface)] = translation.text;
-    }
-  }
-
-  return {
-    sourceText: result.cue.sourceText,
-    translatedText: primaryTranslation?.text ?? "Translation unavailable",
-    sourceLanguage: result.sourceLanguage,
-    targetLanguage: result.targetLanguage,
-    provider: result.provider.model
-      ? `${result.provider.name}:${result.provider.model}`
-      : result.provider.name,
-    isMock: result.provider.name === "development",
-    tokenTranslations
-  };
-}
-
-function normalizeToken(value: string): string {
-  return value
-    .toLocaleLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/['’]/g, "")
-    .trim();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

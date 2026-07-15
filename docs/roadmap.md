@@ -76,11 +76,25 @@ evaluation harness are now in place.
 
 Status: next checkpoint. See [production-data-path-audit.md](production-data-path-audit.md).
 
-- [ ] Remove the embedded dictionary from the production extension bundle
-- [ ] Make API segments the only source for word and expression cards
-- [ ] Keep deterministic fixtures only in automated tests
-- [ ] Require an explicit non-fixture provider outside tests
+- [x] Remove the embedded dictionary from the production extension bundle
+- [x] Make API segments the only source for word and expression cards
+- [x] Keep deterministic fixtures only in automated tests
+- [x] Require a non-fixture provider outside tests
 - [ ] Validate the extension on real YouTube watch-page navigation
+
+## Phase 13 - Hosted Inference Strategy
+
+Status: discovery required. The local end-to-end path works but is not fast or
+reliable enough for product use. See
+[hosted-inference-next-steps.md](hosted-inference-next-steps.md).
+
+- [ ] Define multilingual, bidirectional quality fixtures
+- [ ] Compare a single structured model, specialized pipeline, and hybrid fast-path
+- [ ] Measure word coverage, expressions, part of speech, and romanization
+- [ ] Establish warm p50/p95 latency and throughput targets
+- [ ] Estimate VRAM and hosting cost from measured GPU runs
+- [ ] Select only commercially compatible open-weight components
+- [ ] Host the backend independently from the developer computer
 
 ## Phase 11 - Cache and Language Analysis
 

@@ -85,32 +85,35 @@ class MissingPrimaryTranslationProvider(FakeAnalysisProvider):
         )
 
 
+class MissingSegmentProvider(FakeAnalysisProvider):
+    def analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
+        return tuple(
+            AnalyzedCue(
+                cue_id=cue.cue_id,
+                source_text=cue.text,
+                translations=(
+                    TranslationCandidate(
+                        text=f"Translated: {cue.text}",
+                        kind=TranslationKind.CONTEXTUAL,
+                        is_primary=True,
+                    ),
+                ),
+            )
+            for cue in batch.cues
+        )
+
+
 def create_client(provider: FakeAnalysisProvider) -> TestClient:
     service = SubtitleAnalysisService(provider)
     return TestClient(create_app(service))
 
 
 class SubtitleAnalysisApiTests(unittest.TestCase):
-    def test_default_app_is_immediately_testable_without_model_runtime(self) -> None:
-        response = TestClient(create_app()).post(
-            "/v1/subtitles/analyze",
-            json={
-                "schemaVersion": "1.0",
-                "sourceLanguage": "fr",
-                "targetLanguage": "en",
-                "cues": [
-                    {"cueId": "cue-1", "text": "Regardez la fleur de plus près."}
-                ],
-            },
-        )
+    def test_default_app_health_is_testable_without_model_inference(self) -> None:
+        response = TestClient(create_app()).get("/health")
 
         self.assertEqual(response.status_code, 200)
-        payload = response.json()
-        self.assertEqual(payload["provider"]["name"], "development")
-        self.assertEqual(
-            payload["cues"][0]["translations"][0]["text"],
-            "Look at the flower more closely.",
-        )
+        self.assertEqual(response.json(), {"status": "ok"})
 
     def test_health_check_does_not_require_inference(self) -> None:
         response = create_client(FakeAnalysisProvider()).get("/health")
@@ -243,10 +246,23 @@ class SubtitleAnalysisApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 502)
 
-    def test_legacy_endpoint_is_documented_as_deprecated(self) -> None:
+    def test_rejects_provider_output_without_interactive_segments(self) -> None:
+        response = create_client(MissingSegmentProvider()).post(
+            "/v1/subtitles/analyze",
+            json={
+                "schemaVersion": "1.0",
+                "sourceLanguage": "fr",
+                "targetLanguage": "en",
+                "cues": [{"cueId": "cue-1", "text": "Bonjour"}],
+            },
+        )
+
+        self.assertEqual(response.status_code, 502)
+
+    def test_legacy_endpoint_is_removed(self) -> None:
         openapi = create_client(FakeAnalysisProvider()).get("/openapi.json").json()
 
-        self.assertTrue(openapi["paths"]["/translate-line"]["post"]["deprecated"])
+        self.assertNotIn("/translate-line", openapi["paths"])
 
 
 if __name__ == "__main__":

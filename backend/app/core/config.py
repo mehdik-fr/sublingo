@@ -2,12 +2,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from os import environ
 
-SUPPORTED_PROVIDERS = {"development", "argos", "ollama"}
+SUPPORTED_PROVIDERS = {"ollama"}
 
 
 @dataclass(frozen=True, slots=True)
 class Settings:
-    analysis_provider: str = "development"
+    analysis_provider: str = "ollama"
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen2.5:7b"
     ollama_timeout_seconds: float = 180.0
@@ -15,7 +15,7 @@ class Settings:
     @classmethod
     def from_environment(cls, values: Mapping[str, str] | None = None) -> "Settings":
         source = values if values is not None else environ
-        provider = source.get("SUBLINGO_ANALYSIS_PROVIDER", "development").strip().lower()
+        provider = source.get("SUBLINGO_ANALYSIS_PROVIDER", "ollama").strip().lower()
 
         if provider not in SUPPORTED_PROVIDERS:
             supported = ", ".join(sorted(SUPPORTED_PROVIDERS))

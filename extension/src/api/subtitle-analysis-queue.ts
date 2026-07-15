@@ -39,10 +39,12 @@ export class SubtitleAnalysisQueue {
   private readonly cacheTtlMs: number;
   private readonly maxBatchSize: number;
   private readonly maxCacheEntries: number;
+  private readonly maxPendingEntries: number;
   private readonly now: () => number;
   private cache = new Map<string, CacheEntry>();
   private pending = new Map<string, PendingRequest[]>();
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private isFlushing = false;
   private cueSequence = 0;
 
   constructor(
@@ -52,14 +54,16 @@ export class SubtitleAnalysisQueue {
       cacheTtlMs?: number;
       maxBatchSize?: number;
       maxCacheEntries?: number;
+      maxPendingEntries?: number;
       now?: () => number;
     } = {}
   ) {
     this.analyzer = analyzer;
     this.batchDelayMs = options.batchDelayMs ?? 40;
     this.cacheTtlMs = options.cacheTtlMs ?? 30 * 60 * 1000;
-    this.maxBatchSize = options.maxBatchSize ?? 10;
+    this.maxBatchSize = options.maxBatchSize ?? 2;
     this.maxCacheEntries = options.maxCacheEntries ?? 500;
+    this.maxPendingEntries = options.maxPendingEntries ?? 4;
     this.now = options.now ?? Date.now;
   }
 
@@ -81,6 +85,10 @@ export class SubtitleAnalysisQueue {
     }
 
     return new Promise<SubtitleAnalysisResult>((resolve, reject) => {
+      if (!this.pending.has(key)) {
+        this.evictStalePendingEntries();
+      }
+
       const pendingForKey = this.pending.get(key) ?? [];
       pendingForKey.push({
         cueId: `cue-${this.cueSequence += 1}`,
@@ -96,10 +104,19 @@ export class SubtitleAnalysisQueue {
 
   clear(): void {
     this.cache.clear();
+
+    if (this.flushTimer !== null) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
+
+    const error = new Error("Subtitle analysis queue cleared");
+    this.pending.forEach((waiters) => waiters.forEach((waiter) => waiter.reject(error)));
+    this.pending.clear();
   }
 
   private scheduleFlush(): void {
-    if (this.flushTimer !== null) {
+    if (this.flushTimer !== null || this.isFlushing) {
       return;
     }
 
@@ -110,11 +127,17 @@ export class SubtitleAnalysisQueue {
   }
 
   private async flush(): Promise<void> {
+    if (this.isFlushing) {
+      return;
+    }
+
     const firstPending = this.pending.values().next().value?.[0] as PendingRequest | undefined;
 
     if (!firstPending) {
       return;
     }
+
+    this.isFlushing = true;
 
     const languages = firstPending.languages;
     const entries = Array.from(this.pending.entries())
@@ -169,8 +192,27 @@ export class SubtitleAnalysisQueue {
       entries.forEach(([, waiters]) => waiters.forEach((waiter) => waiter.reject(error)));
     }
 
+    this.isFlushing = false;
+
     if (this.pending.size > 0) {
       this.scheduleFlush();
+    }
+  }
+
+  private evictStalePendingEntries(): void {
+    while (this.pending.size >= this.maxPendingEntries) {
+      const oldestEntry = this.pending.entries().next().value as
+        | [string, PendingRequest[]]
+        | undefined;
+
+      if (!oldestEntry) {
+        return;
+      }
+
+      const [key, waiters] = oldestEntry;
+      this.pending.delete(key);
+      const error = new Error("Subtitle analysis request superseded by newer captions");
+      waiters.forEach((waiter) => waiter.reject(error));
     }
   }
 

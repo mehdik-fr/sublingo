@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from app.domain.analysis import AnalysisBatch, AnalysisResult
+from app.domain.analysis import AnalysisBatch, AnalysisResult, SegmentKind
 from app.providers.base import AnalysisProvider, ProviderError
 
 
@@ -41,6 +41,33 @@ class SubtitleAnalysisService:
             if primary_count != 1:
                 raise InvalidProviderResponseError(
                     "Provider must return exactly one primary cue translation"
+                )
+
+            segment_ids = [segment.segment_id for segment in analyzed_cue.segments]
+
+            if len(segment_ids) != len(set(segment_ids)):
+                raise InvalidProviderResponseError(
+                    "Provider returned duplicate segment identifiers"
+                )
+
+            if any(
+                segment.surface not in input_cue.text
+                for segment in analyzed_cue.segments
+            ):
+                raise InvalidProviderResponseError(
+                    "Provider returned a segment outside the source subtitle text"
+                )
+
+            interactive_segments = [
+                segment
+                for segment in analyzed_cue.segments
+                if segment.kind in {SegmentKind.WORD, SegmentKind.EXPRESSION}
+                and segment.translations
+            ]
+
+            if any(character.isalnum() for character in input_cue.text) and not interactive_segments:
+                raise InvalidProviderResponseError(
+                    "Provider must return a translated word or expression segment"
                 )
 
         return AnalysisResult(

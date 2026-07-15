@@ -18,16 +18,18 @@ protocol rather than a concrete model runtime.
 
 Responses preserve cue and segment order and allow optional romanization, script
 variants, grammatical features, and multiple contextual or literal translations.
-The first Argos adapter supplies whole-line translations only; it is a development
+The first Argos adapter supplied whole-line translations only and was a migration
 provider rather than the target product engine.
 
-The legacy `/translate-line` endpoint remains temporarily available and is marked
-as deprecated while the extension migrates.
+Implementation update: the extension migration is complete. The legacy
+`/translate-line` endpoint, Argos adapter, embedded dictionary, and deterministic
+runtime provider have been removed. Production word and expression cards now use
+only structured API segments.
 
 ## Consequences
 
 - Provider and hosting decisions no longer leak into the public API.
 - Contract changes are reviewable and can be checked by both Python and TypeScript.
 - Batching becomes possible before hosted inference is introduced.
-- A migration period is required while both endpoints coexist.
+- The completed migration leaves a single public analysis data path.
 - Cache, authentication, rate limiting, and production CORS remain later milestones.

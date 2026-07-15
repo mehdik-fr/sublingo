@@ -47,9 +47,9 @@ Then load the `extension/` folder from `chrome://extensions`.
 The popup exposes a minimal active/inactive toggle backed by extension storage.
 
 When the local backend is running, the extension batches subtitle cues through the
-versioned analysis API. Repeated requests are cached in the extension and the local
-demo prefetches the next cue. The backend uses a deterministic development provider
-by default, so the complete integration remains testable without an AI model.
+versioned analysis API. Repeated requests are cached and CPU inference is serialized
+to prevent subtitle backlogs. Word and expression cards are built only from API
+segments; no translation dictionary is embedded in the production extension.
 
 An optional Ollama provider can evaluate an open-weight model that is already
 installed on the machine. Sublingo never downloads a model automatically and does
@@ -69,7 +69,7 @@ to self-hosted infrastructure and GPU capacity.
 
 - TypeScript for the browser extension
 - Python and FastAPI for the translation backend
-- Deterministic fixtures during migration, moving to automated tests only
+- Deterministic fixtures isolated to automated tests
 - Self-hosted open-weight inference as the target product direction
 - OpenAPI as the canonical extension/backend contract
 - Lightweight tests as soon as core parsing logic appears
@@ -77,9 +77,10 @@ to self-hosted infrastructure and GPU capacity.
 ## Status
 
 Local subtitle prototype complete. The extension now uses the versioned batch API
-with client-side batching, prefetching, and caching. A guarded Ollama provider and
-local evaluation harness can screen already-installed open-weight models; hosted
-GPU selection remains in progress.
+with client-side batching, serialized inference, stale-caption control, and caching.
+The end-to-end Ollama path works, but a simple CPU request took 73.5 seconds and
+segment granularity remains inconsistent. Hosted GPU and model/pipeline selection
+remain open. See [docs/hosted-inference-next-steps.md](docs/hosted-inference-next-steps.md).
 
 ## Roadmap
 

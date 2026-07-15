@@ -23,7 +23,7 @@ test("posts the generated v1 contract and validates the response", async () => {
         analysisId: "analysis-1",
         sourceLanguage: "fr",
         targetLanguage: "en",
-        provider: { name: "development", model: "deterministic-fixture" },
+        provider: { name: "fixture", model: "test-only" },
         cues: [
           {
             cueId: "cue-1",
@@ -59,6 +59,49 @@ test("rejects a malformed backend response", async () => {
         sourceLanguage: "fr",
         targetLanguage: "en",
         cues: [{ cueId: "cue-1", text: "Bonjour." }]
+      },
+      fetcher as typeof fetch
+    ),
+    /invalid payload/
+  );
+});
+
+test("rejects malformed structured segment metadata", async () => {
+  const fetcher = async (): Promise<Response> =>
+    new Response(
+      JSON.stringify({
+        schemaVersion: "1.0",
+        analysisId: "analysis-1",
+        sourceLanguage: "ko",
+        targetLanguage: "en",
+        provider: { name: "fixture" },
+        cues: [
+          {
+            cueId: "cue-1",
+            sourceText: "안녕하세요",
+            translations: [{ text: "Hello", kind: "contextual", isPrimary: true }],
+            segments: [
+              {
+                segmentId: "cue-1:0",
+                surface: "안녕하세요",
+                kind: "expression",
+                romanization: 123,
+                translations: [{ text: "Hello", kind: "contextual", isPrimary: true }]
+              }
+            ]
+          }
+        ]
+      }),
+      { status: 200 }
+    );
+
+  await assert.rejects(
+    requestSubtitleAnalysis(
+      {
+        schemaVersion: "1.0",
+        sourceLanguage: "ko",
+        targetLanguage: "en",
+        cues: [{ cueId: "cue-1", text: "안녕하세요" }]
       },
       fetcher as typeof fetch
     ),

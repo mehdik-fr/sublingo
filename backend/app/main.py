@@ -3,10 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import router as v1_router
 from app.core.config import Settings
-from app.models import HealthResponse, TranslateLineRequest, TranslateLineResponse
+from app.models import HealthResponse
 from app.providers.factory import create_analysis_provider
 from app.services.subtitle_analysis import SubtitleAnalysisService
-from app.translation_service import translate_line
 
 
 def create_app(
@@ -15,7 +14,7 @@ def create_app(
 ) -> FastAPI:
     application = FastAPI(
         title="Sublingo Backend",
-        version="0.2.0",
+        version="0.3.0",
         description="Versioned subtitle analysis API for the Sublingo browser extension.",
     )
     resolved_settings = settings or Settings.from_environment()
@@ -34,10 +33,6 @@ def create_app(
     @application.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:
         return HealthResponse(status="ok")
-
-    @application.post("/translate-line", response_model=TranslateLineResponse, deprecated=True)
-    def translate_line_endpoint(request: TranslateLineRequest) -> TranslateLineResponse:
-        return translate_line(request)
 
     return application
 

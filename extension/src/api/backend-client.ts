@@ -78,9 +78,30 @@ function isSegment(value: unknown): boolean {
     isRecord(value) &&
     typeof value.segmentId === "string" &&
     typeof value.surface === "string" &&
+    ["word", "expression", "punctuation", "whitespace"].includes(String(value.kind)) &&
+    isOptionalString(value.normalizedForm) &&
+    isOptionalString(value.romanization) &&
+    isOptionalArray(value.scriptVariants, isScriptVariant) &&
     Array.isArray(value.translations) &&
-    value.translations.every(isTranslation)
+    value.translations.every(isTranslation) &&
+    isOptionalArray(value.grammar, isGrammarFeature)
   );
+}
+
+function isScriptVariant(value: unknown): boolean {
+  return isRecord(value) && typeof value.script === "string" && typeof value.text === "string";
+}
+
+function isGrammarFeature(value: unknown): boolean {
+  return isRecord(value) && typeof value.name === "string" && typeof value.value === "string";
+}
+
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || value === null || typeof value === "string";
+}
+
+function isOptionalArray(value: unknown, validator: (item: unknown) => boolean): boolean {
+  return value === undefined || (Array.isArray(value) && value.every(validator));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

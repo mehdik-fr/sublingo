@@ -44,12 +44,12 @@ http://127.0.0.1:8765/v1/subtitles/analyze
 
 Requests and responses use the TypeScript declarations generated from
 `contracts/openapi.json`. A short queue batches nearby cues, coalesces duplicate
-requests, prefetches the next local-demo cue, and caches analyses for 30 minutes.
+requests, serializes inference, drops stale captions, and caches analyses for 30 minutes.
 The cache key includes the language pair and surrounding context.
 
-The backend defaults to a deterministic provider, so no model or paid AI API is
-required for development. Ollama is optional and only uses an already-installed
-open-weight model.
+The production bundle contains no translation dictionary. Word and expression cards
+are created exclusively from API segments. The backend uses an already-installed
+open-weight model and never invokes a paid AI API or downloads weights automatically.
 
 Run extension tests, type checking, and the production build from the repository
 root with:

@@ -6,37 +6,48 @@ import httpx
 from app.core.config import Settings
 from app.domain.analysis import AnalysisBatch, SubtitleCue
 from app.providers.base import ProviderError
-from app.providers.development import DevelopmentAnalysisProvider
 from app.providers.factory import create_analysis_provider
 from app.providers.ollama import OllamaAnalysisProvider
 
 
 class ProviderConfigurationTests(unittest.TestCase):
-    def test_defaults_to_fast_development_provider(self) -> None:
+    def test_defaults_to_local_ollama_provider_without_contacting_runtime(self) -> None:
         settings = Settings.from_environment({})
 
         provider = create_analysis_provider(settings)
 
-        self.assertIsInstance(provider, DevelopmentAnalysisProvider)
+        self.assertIsInstance(provider, OllamaAnalysisProvider)
+        self.assertEqual(provider.metadata.name, "ollama")
+        self.assertEqual(provider.metadata.model, "qwen2.5:7b")
 
     def test_rejects_unknown_provider(self) -> None:
         with self.assertRaisesRegex(ValueError, "Unsupported analysis provider"):
             Settings.from_environment({"SUBLINGO_ANALYSIS_PROVIDER": "paid-api"})
 
-    def test_development_provider_returns_deterministic_batch(self) -> None:
+        with self.assertRaisesRegex(ValueError, "Unsupported analysis provider"):
+            Settings.from_environment({"SUBLINGO_ANALYSIS_PROVIDER": "development"})
+
+class OllamaAnalysisProviderTests(unittest.TestCase):
+    def test_rejects_concurrent_inference_instead_of_building_a_cpu_backlog(self) -> None:
+        provider = OllamaAnalysisProvider(
+            base_url="http://ollama.test",
+            model="qwen2.5:7b",
+            timeout_seconds=30,
+            transport=httpx.MockTransport(lambda _request: httpx.Response(500)),
+        )
         batch = AnalysisBatch(
             source_language="fr",
             target_language="en",
-            cues=(SubtitleCue(cue_id="cue-1", text="Regardez la fleur de plus près."),),
+            cues=(SubtitleCue(cue_id="cue-1", text="Bonjour."),),
         )
+        provider._inference_lock.acquire()
 
-        result = DevelopmentAnalysisProvider().analyze_batch(batch)
+        try:
+            with self.assertRaisesRegex(ProviderError, "already processing a batch"):
+                provider.analyze_batch(batch)
+        finally:
+            provider._inference_lock.release()
 
-        self.assertEqual(result[0].translations[0].text, "Look at the flower more closely.")
-        self.assertEqual(result[0].translations[0].confidence, 1.0)
-
-
-class OllamaAnalysisProviderTests(unittest.TestCase):
     def test_uses_only_an_already_installed_model_and_validates_json(self) -> None:
         requests: list[httpx.Request] = []
 
@@ -66,7 +77,6 @@ class OllamaAnalysisProviderTests(unittest.TestCase):
                                             {
                                                 "text": "Look at the flower.",
                                                 "kind": "contextual",
-                                                "is_primary": True,
                                                 "confidence": 80,
                                             }
                                         ],
@@ -107,6 +117,7 @@ class OllamaAnalysisProviderTests(unittest.TestCase):
 
         self.assertEqual(result[0].source_text, "Regardez la fleur.")
         self.assertEqual(result[0].translations[0].text, "Look at the flower.")
+        self.assertTrue(result[0].translations[0].is_primary)
         self.assertEqual(result[0].translations[0].confidence, 0.8)
         self.assertEqual(result[0].segments[0].surface, "la fleur")
         self.assertEqual([request.url.path for request in requests], ["/api/tags", "/api/chat"])

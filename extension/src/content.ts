@@ -1,12 +1,14 @@
-import type { PreparedDictionaryEntry } from "./dictionary";
 import {
   clearSubtitleTranslationCache,
-  prefetchSubtitleLine,
   translateSubtitleLine,
   type SubtitleTranslation
 } from "./translation-client";
-import { hasRomanization, isRedundantDefinition } from "./tooltip-content";
-import { findEntryAt, isWord, splitSegments } from "./tokenizer";
+import { buildSubtitleRenderParts } from "./segment-matcher";
+import {
+  selectPrimaryTranslation,
+  type SubtitleSegmentAnalysis
+} from "./subtitle-analysis-mapper";
+import { hasRomanization } from "./tooltip-content";
 
 const ROOT_ID = "sublingo-extension-root";
 const INLINE_STYLE_ID = "sublingo-inline-styles";
@@ -37,16 +39,12 @@ type SubtitleRootState = {
 };
 
 type TokenTooltipData = {
-  kind: "dictionary" | "line";
   source: string;
   target: string;
   romanization: string;
   grammar: string;
-  definition: string;
   pronunciation: string;
-  lineTranslation: string | null;
   provider: string | null;
-  isMock: boolean;
 };
 
 type ExtensionState = {
@@ -421,22 +419,6 @@ function ensureDemoTrackBridge(): void {
     const cueText = getCueText(cue);
     subtitle.textContent = cueText;
 
-    if (cue && track.cues) {
-      const cues = Array.from(track.cues);
-      const activeIndex = cues.indexOf(cue);
-      const nextCueText = activeIndex >= 0 ? getCueText(cues[activeIndex + 1] ?? null) : "";
-
-      if (nextCueText) {
-        prefetchSubtitleLine(
-          nextCueText,
-          {
-            sourceLanguage: state.sourceLanguage,
-            targetLanguage: state.targetLanguage
-          },
-          { contextBefore: cueText }
-        );
-      }
-    }
   };
 
   track.mode = "hidden";
@@ -528,30 +510,20 @@ function renderInteractiveSubtitle(
     closePinnedTooltip();
   }
 
-  const segments = splitSegments(text);
+  const parts = buildSubtitleRenderParts(text, rootState.translation?.segments ?? []);
   const fragment = document.createDocumentFragment();
   let hasInteractiveToken = false;
 
-  for (let index = 0; index < segments.length; index += 1) {
-    const segment = segments[index];
-
-    if (!isWord(segment)) {
-      fragment.append(document.createTextNode(segment));
+  for (const part of parts) {
+    if (!part.segment) {
+      fragment.append(document.createTextNode(part.text));
       continue;
     }
-
-    const match = findEntryAt(segments, index);
 
     hasInteractiveToken = true;
-
-    if (match) {
-      const label = segments.slice(index, match.endIndex + 1).join("");
-      fragment.append(createToken(createDictionaryTooltipData(match.entry, rootState), label));
-      index = match.endIndex;
-      continue;
-    }
-
-    fragment.append(createToken(createLineTooltipData(segment, rootState), segment));
+    fragment.append(
+      createToken(createSegmentTooltipData(part.segment, rootState), part.text)
+    );
   }
 
   if (hasInteractiveToken) {
@@ -626,19 +598,6 @@ function renderTooltip(entry: TokenTooltipData, pinned: boolean): void {
     return;
   }
 
-  if (entry.kind === "line") {
-    renderLineTooltip(entry, pinned);
-    return;
-  }
-
-  renderDictionaryTooltip(entry, pinned);
-}
-
-function renderDictionaryTooltip(entry: TokenTooltipData, pinned: boolean): void {
-  if (!state.tooltipElement) {
-    return;
-  }
-
   state.tooltipElement.innerHTML = `
     <div class="tooltip-header">
       <p class="tooltip-title">${escapeHtml(entry.source)}</p>
@@ -653,17 +612,16 @@ function renderDictionaryTooltip(entry: TokenTooltipData, pinned: boolean): void
              <p class="tooltip-value">${escapeHtml(entry.romanization)}</p>`
           : ""
       }
-      <span class="tooltip-label">Grammar</span>
-      <p class="tooltip-value">${escapeHtml(entry.grammar)}</p>
+      ${
+        entry.grammar
+          ? `<span class="tooltip-label">Grammar</span>
+             <p class="tooltip-value">${escapeHtml(entry.grammar)}</p>`
+          : ""
+      }
     </div>
     ${
-      isRedundantDefinition(entry.definition, entry.target)
-        ? ""
-        : `<p class="tooltip-body">${escapeHtml(entry.definition)}</p>`
-    }
-    ${
       pinned && entry.provider
-        ? `<p class="tooltip-meta">${escapeHtml(entry.provider)} ${entry.isMock ? "(mock)" : ""}</p>`
+        ? `<p class="tooltip-meta">${escapeHtml(entry.provider)}</p>`
         : ""
     }
     ${
@@ -676,83 +634,30 @@ function renderDictionaryTooltip(entry: TokenTooltipData, pinned: boolean): void
   state.tooltipElement.classList.toggle("pinned", pinned);
 }
 
-function renderLineTooltip(entry: TokenTooltipData, pinned: boolean): void {
-  if (!state.tooltipElement) {
-    return;
-  }
-
-  state.tooltipElement.innerHTML = `
-    <div class="tooltip-header">
-      <p class="tooltip-title">${escapeHtml(entry.source)} -> ${escapeHtml(entry.target)}</p>
-      ${pinned ? '<button class="tooltip-close" type="button" data-close-tooltip aria-label="Close tooltip">x</button>' : ""}
-    </div>
-    ${
-      pinned && entry.lineTranslation
-        ? `<p class="tooltip-line">${escapeHtml(entry.lineTranslation)}</p>`
-        : ""
-    }
-    ${
-      pinned && entry.provider
-        ? `<p class="tooltip-meta">${escapeHtml(entry.provider)} ${entry.isMock ? "(mock)" : ""}</p>`
-        : ""
-    }
-    ${
-      pinned && entry.target !== "Translation loading"
-        ? `<button class="listen-button" type="button" data-pronunciation="${escapeHtml(entry.pronunciation)}">Listen</button>`
-        : ""
-    }
-  `;
-
-  state.tooltipElement.classList.toggle("pinned", pinned);
-}
-
-function createDictionaryTooltipData(
-  entry: PreparedDictionaryEntry,
+function createSegmentTooltipData(
+  segment: SubtitleSegmentAnalysis,
   rootState: SubtitleRootState
 ): TokenTooltipData {
+  const translation = selectPrimaryTranslation(segment.translations);
+
   return {
-    kind: "dictionary",
-    source: entry.displaySource ?? entry.source,
-    target: entry.target,
-    romanization: entry.romanization,
-    grammar: entry.grammar,
-    definition: entry.definition,
-    pronunciation: entry.pronunciation,
-    lineTranslation: null,
-    provider: rootState.translation?.provider ?? null,
-    isMock: rootState.translation?.isMock ?? false
+    source: segment.surface,
+    target: translation?.text ?? "Translation unavailable",
+    romanization: segment.romanization ?? "",
+    grammar: segment.grammar.map(formatGrammarFeature).join(" · "),
+    pronunciation: translation?.text ?? segment.surface,
+    provider: rootState.translation?.provider ?? null
   };
 }
 
-function createLineTooltipData(token: string, rootState: SubtitleRootState): TokenTooltipData {
-  const tokenTranslation = getTokenTranslation(token, rootState);
+function formatGrammarFeature(feature: { name: string; value: string }): string {
+  const normalizedName = feature.name.toLocaleLowerCase().replace(/[^a-z]/g, "");
 
-  return {
-    kind: "line",
-    source: token,
-    target: tokenTranslation ?? "Translation loading",
-    romanization: "-",
-    grammar: "unknown",
-    definition: rootState.translationError ?? "Translation loading.",
-    pronunciation: tokenTranslation ?? token,
-    lineTranslation: null,
-    provider: rootState.translation?.provider ?? null,
-    isMock: rootState.translation?.isMock ?? false
-  };
-}
+  if (normalizedName === "partofspeech" || normalizedName === "type") {
+    return feature.value;
+  }
 
-function getTokenTranslation(token: string, rootState: SubtitleRootState): string | null {
-  const key = normalizeTooltipToken(token);
-  return rootState.translation?.tokenTranslations[key] ?? null;
-}
-
-function normalizeTooltipToken(value: string): string {
-  return value
-    .toLocaleLowerCase("fr-FR")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/['’]/g, "")
-    .trim();
+  return `${feature.name}: ${feature.value}`;
 }
 
 async function requestSubtitleTranslation(

@@ -38,26 +38,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/translate-line": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Translate Line Endpoint
-         * @deprecated
-         */
-        post: operations["translate_line_endpoint_translate_line_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -170,34 +150,6 @@ export interface components {
             /** Contextafter */
             contextAfter?: string | null;
         };
-        /** TranslateLineRequest */
-        TranslateLineRequest: {
-            /** Sourcelanguage */
-            sourceLanguage: string;
-            /** Targetlanguage */
-            targetLanguage: string;
-            /** Text */
-            text: string;
-        };
-        /** TranslateLineResponse */
-        TranslateLineResponse: {
-            /** Sourcetext */
-            sourceText: string;
-            /** Translatedtext */
-            translatedText: string;
-            /** Sourcelanguage */
-            sourceLanguage: string;
-            /** Targetlanguage */
-            targetLanguage: string;
-            /** Provider */
-            provider: string;
-            /** Ismock */
-            isMock: boolean;
-            /** Tokentranslations */
-            tokenTranslations: {
-                [key: string]: string;
-            };
-        };
         /** TranslationCandidateResponse */
         TranslationCandidateResponse: {
             /** Text */
@@ -279,39 +231,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
-                };
-            };
-        };
-    };
-    translate_line_endpoint_translate_line_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TranslateLineRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TranslateLineResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

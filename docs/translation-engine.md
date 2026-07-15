@@ -51,6 +51,11 @@ Single-cue attempts took between 85 and 102 seconds. This candidate is useful fo
 integration screening but is not validated for production quality or latency. GPU
 benchmarking and human evaluation are required before model selection.
 
+After serializing inference and normalizing a missing primary marker, a later
+`Bonjour.` end-to-end smoke request succeeded with one translated word segment in
+73.5 seconds. This confirms integration only; it does not resolve latency, segment
+coverage, grammar, expression detection, or multilingual quality.
+
 ## Alternatives Considered
 
 ### LibreTranslate
@@ -71,7 +76,7 @@ NLLB covers many languages and can be powerful, but the available Meta model lic
 
 It is not a first implementation target.
 
-## Implementation Plan
+## Historical Implementation Sequence
 
 1. Add a FastAPI backend with a mock translation endpoint.
 2. Connect the extension to the local backend.
@@ -82,6 +87,10 @@ It is not a first implementation target.
 7. Add an Ollama adapter that refuses absent models instead of downloading them.
 8. Compare commercially compatible open-weight candidates using the same structured response contract.
 9. Benchmark the shortlist on self-hosted GPU infrastructure before selecting a model.
+
+Steps 1–7 established the architecture and the Argos path has since been removed.
+The active work now starts with structured open-weight evaluation and hosted GPU
+readiness.
 
 ## Accepted Limitations
 

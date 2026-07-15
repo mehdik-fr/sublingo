@@ -4,27 +4,29 @@ FastAPI backend for versioned subtitle analysis.
 
 The backend exists so the browser extension can stay lightweight while translation and language analysis run outside the content script.
 
-The default provider is deterministic and requires no model. The same versioned API
-can optionally use Argos or an already-installed Ollama model without changing the
-extension contract.
+The runtime provider uses an already-installed Ollama model. Deterministic responses
+and translations are confined to automated tests and are not a production fallback.
 
 ## Current Scope
 
 - Health check endpoint
 - Versioned batch endpoint at `POST /v1/subtitles/analyze`
 - Provider-independent response contract with multilingual optional fields
-- Configurable `development`, `argos`, and `ollama` providers
+- Configurable local or hosted Ollama endpoint
 - No paid API usage
 - No automatic model download
-- Deprecated French-to-English endpoint at `POST /translate-line`
+- API segments are required for word and expression cards
 
 ## Known Limitations
 
 - The service must still be started manually during development.
-- Optional translation models are installed locally and are not packaged with the extension.
-- The Argos v1 provider returns whole-line translations and no segment analysis.
+- Model weights are installed outside the repository and are not packaged with the extension.
 - Local Ollama evaluation on this CPU-only Windows computer is useful for contract
   and quality screening, not production latency estimates.
+- A simple `Bonjour.` smoke analysis took 73.5 seconds on CPU. This is functionally
+  valid but unusable for interactive subtitle latency.
+- Word-level coverage and grammatical metadata remain inconsistent with the current
+  model; model or pipeline strategy is not selected yet.
 - The target product architecture is a self-hosted backend using a commercially
   compatible open-weight model on GPU infrastructure.
 - Production authentication, rate limiting, caching, CORS, and observability are not implemented yet.
@@ -52,13 +54,10 @@ pip install -r requirements-dev.txt
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8765
 ```
 
-The default `development` provider returns deterministic fixture translations and
-is suitable for the extension and test suite without installing a model.
-
-To use a model already present in Ollama:
+The default configuration targets `qwen2.5:7b` through local Ollama. Override the
+endpoint or model with:
 
 ```powershell
-$env:SUBLINGO_ANALYSIS_PROVIDER = "ollama"
 $env:SUBLINGO_OLLAMA_MODEL = "qwen2.5:7b"
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8765
 ```
@@ -87,19 +86,6 @@ Invoke-RestMethod `
 The response schema is provider-independent and can include primary translations,
 word or expression segments, grammar metadata, script variants, and confidence.
 
-## Legacy Line Translation
-
-```powershell
-Invoke-RestMethod `
-  -Method Post `
-  -Uri http://127.0.0.1:8765/translate-line `
-  -ContentType "application/json" `
-  -Body '{"sourceLanguage":"fr","targetLanguage":"en","text":"Regardez la fleur de plus pres."}'
-```
-
-The response uses the local Argos Translate model when that provider and model are
-configured. This endpoint is deprecated; the extension now uses the v1 batch API.
-
 ## Tests And Contract Generation
 
 From `backend/`:
@@ -117,3 +103,5 @@ npm run contract:generate
 
 The local Ollama evaluation harness only accepts registered, commercially compatible
 models that are already installed. See [evaluation/README.md](evaluation/README.md).
+The hosted architecture questions and benchmark requirements are documented in
+[../docs/hosted-inference-next-steps.md](../docs/hosted-inference-next-steps.md).

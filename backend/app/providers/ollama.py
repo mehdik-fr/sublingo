@@ -1,4 +1,5 @@
 import json
+from threading import Lock
 from typing import Literal
 
 import httpx
@@ -97,12 +98,22 @@ class OllamaAnalysisProvider:
         self._timeout_seconds = timeout_seconds
         self._transport = transport
         self._model_is_available = False
+        self._inference_lock = Lock()
 
     @property
     def metadata(self) -> ProviderMetadata:
         return ProviderMetadata(name="ollama", model=self._model)
 
     def analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
+        if not self._inference_lock.acquire(blocking=False):
+            raise ProviderError("Ollama analysis provider is already processing a batch")
+
+        try:
+            return self._analyze_batch(batch)
+        finally:
+            self._inference_lock.release()
+
+    def _analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
         self._ensure_model_is_installed()
         request_body = {
             "model": self._model,
@@ -163,15 +174,7 @@ class OllamaAnalysisProvider:
                 AnalyzedCue(
                     cue_id=cue.cue_id,
                     source_text=source_cues[cue.cue_id].text,
-                    translations=tuple(
-                        TranslationCandidate(
-                            text=translation.text,
-                            kind=TranslationKind(translation.kind),
-                            is_primary=translation.is_primary,
-                            confidence=translation.confidence,
-                        )
-                        for translation in cue.translations
-                    ),
+                    translations=self._to_translations(cue.translations),
                     segments=tuple(self._to_segment(segment) for segment in cue.segments),
                 )
                 for cue in generated.cues
@@ -218,17 +221,28 @@ class OllamaAnalysisProvider:
                 ScriptVariant(script=variant.script, text=variant.text)
                 for variant in segment.script_variants
             ),
-            translations=tuple(
-                TranslationCandidate(
-                    text=translation.text,
-                    kind=TranslationKind(translation.kind),
-                    is_primary=translation.is_primary,
-                    confidence=translation.confidence,
-                )
-                for translation in segment.translations
-            ),
+            translations=OllamaAnalysisProvider._to_translations(segment.translations),
             grammar=tuple(
                 GrammaticalFeature(name=feature.name, value=feature.value)
                 for feature in segment.grammar
             ),
+        )
+
+    @staticmethod
+    def _to_translations(
+        translations: list[GeneratedTranslation],
+    ) -> tuple[TranslationCandidate, ...]:
+        primary_index = next(
+            (index for index, translation in enumerate(translations) if translation.is_primary),
+            0,
+        )
+
+        return tuple(
+            TranslationCandidate(
+                text=translation.text,
+                kind=TranslationKind(translation.kind),
+                is_primary=index == primary_index,
+                confidence=translation.confidence,
+            )
+            for index, translation in enumerate(translations)
         )

@@ -3,7 +3,7 @@
   "info": {
     "title": "Sublingo Backend",
     "description": "Versioned subtitle analysis API for the Sublingo browser extension.",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "paths": {
     "/v1/subtitles/analyze": {
@@ -63,45 +63,6 @@
             }
           }
         }
-      }
-    },
-    "/translate-line": {
-      "post": {
-        "summary": "Translate Line Endpoint",
-        "operationId": "translate_line_endpoint_translate_line_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TranslateLineRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TranslateLineResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "deprecated": true
       }
     }
   },
@@ -441,78 +402,6 @@
           "text"
         ],
         "title": "SubtitleCueRequest"
-      },
-      "TranslateLineRequest": {
-        "properties": {
-          "sourceLanguage": {
-            "type": "string",
-            "minLength": 2,
-            "title": "Sourcelanguage"
-          },
-          "targetLanguage": {
-            "type": "string",
-            "minLength": 2,
-            "title": "Targetlanguage"
-          },
-          "text": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Text"
-          }
-        },
-        "type": "object",
-        "required": [
-          "sourceLanguage",
-          "targetLanguage",
-          "text"
-        ],
-        "title": "TranslateLineRequest"
-      },
-      "TranslateLineResponse": {
-        "properties": {
-          "sourceText": {
-            "type": "string",
-            "title": "Sourcetext"
-          },
-          "translatedText": {
-            "type": "string",
-            "title": "Translatedtext"
-          },
-          "sourceLanguage": {
-            "type": "string",
-            "title": "Sourcelanguage"
-          },
-          "targetLanguage": {
-            "type": "string",
-            "title": "Targetlanguage"
-          },
-          "provider": {
-            "type": "string",
-            "title": "Provider"
-          },
-          "isMock": {
-            "type": "boolean",
-            "title": "Ismock"
-          },
-          "tokenTranslations": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Tokentranslations"
-          }
-        },
-        "type": "object",
-        "required": [
-          "sourceText",
-          "translatedText",
-          "sourceLanguage",
-          "targetLanguage",
-          "provider",
-          "isMock",
-          "tokenTranslations"
-        ],
-        "title": "TranslateLineResponse"
       },
       "TranslationCandidateResponse": {
         "properties": {
