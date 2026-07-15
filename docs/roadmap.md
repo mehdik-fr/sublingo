@@ -59,6 +59,9 @@ This roadmap is intentionally small and will evolve as the project becomes clear
 
 ## Phase 10 - Hosted Open-Weight Architecture
 
+Status: in progress. The versioned batch contract, provider protocol, generated
+TypeScript declarations, and deterministic API tests are now in place.
+
 - Replace the manually started local backend with a hosted backend target
 - Add a provider interface for translation engines
 - Evaluate an open-weight instruction model for structured subtitle analysis

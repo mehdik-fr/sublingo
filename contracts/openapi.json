@@ -1,0 +1,593 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Sublingo Backend",
+    "description": "Versioned subtitle analysis API for the Sublingo browser extension.",
+    "version": "0.2.0"
+  },
+  "paths": {
+    "/v1/subtitles/analyze": {
+      "post": {
+        "tags": [
+          "subtitle-analysis"
+        ],
+        "summary": "Analyze Subtitles",
+        "operationId": "analyze_subtitles_v1_subtitles_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeSubtitlesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeSubtitlesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/translate-line": {
+      "post": {
+        "summary": "Translate Line Endpoint",
+        "operationId": "translate_line_endpoint_translate_line_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranslateLineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslateLineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalyzeSubtitlesRequest": {
+        "properties": {
+          "schemaVersion": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schemaversion"
+          },
+          "sourceLanguage": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$",
+            "title": "Sourcelanguage"
+          },
+          "targetLanguage": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$",
+            "title": "Targetlanguage"
+          },
+          "cues": {
+            "items": {
+              "$ref": "#/components/schemas/SubtitleCueRequest"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Cues"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "sourceLanguage",
+          "targetLanguage",
+          "cues"
+        ],
+        "title": "AnalyzeSubtitlesRequest"
+      },
+      "AnalyzeSubtitlesResponse": {
+        "properties": {
+          "schemaVersion": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schemaversion"
+          },
+          "analysisId": {
+            "type": "string",
+            "title": "Analysisid"
+          },
+          "sourceLanguage": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$",
+            "title": "Sourcelanguage"
+          },
+          "targetLanguage": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$",
+            "title": "Targetlanguage"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/ProviderResponse"
+          },
+          "cues": {
+            "items": {
+              "$ref": "#/components/schemas/CueAnalysisResponse"
+            },
+            "type": "array",
+            "title": "Cues"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "analysisId",
+          "sourceLanguage",
+          "targetLanguage",
+          "provider",
+          "cues"
+        ],
+        "title": "AnalyzeSubtitlesResponse"
+      },
+      "CueAnalysisResponse": {
+        "properties": {
+          "cueId": {
+            "type": "string",
+            "title": "Cueid"
+          },
+          "sourceText": {
+            "type": "string",
+            "title": "Sourcetext"
+          },
+          "translations": {
+            "items": {
+              "$ref": "#/components/schemas/TranslationCandidateResponse"
+            },
+            "type": "array",
+            "title": "Translations"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/SegmentAnalysisResponse"
+            },
+            "type": "array",
+            "title": "Segments"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cueId",
+          "sourceText",
+          "translations"
+        ],
+        "title": "CueAnalysisResponse"
+      },
+      "GrammaticalFeatureResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "value"
+        ],
+        "title": "GrammaticalFeatureResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse"
+      },
+      "ProviderResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ProviderResponse"
+      },
+      "ScriptVariantResponse": {
+        "properties": {
+          "script": {
+            "type": "string",
+            "title": "Script"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "script",
+          "text"
+        ],
+        "title": "ScriptVariantResponse"
+      },
+      "SegmentAnalysisResponse": {
+        "properties": {
+          "segmentId": {
+            "type": "string",
+            "title": "Segmentid"
+          },
+          "surface": {
+            "type": "string",
+            "title": "Surface"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "word",
+              "expression",
+              "punctuation",
+              "whitespace"
+            ],
+            "title": "Kind"
+          },
+          "normalizedForm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalizedform"
+          },
+          "romanization": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Romanization"
+          },
+          "scriptVariants": {
+            "items": {
+              "$ref": "#/components/schemas/ScriptVariantResponse"
+            },
+            "type": "array",
+            "title": "Scriptvariants"
+          },
+          "translations": {
+            "items": {
+              "$ref": "#/components/schemas/TranslationCandidateResponse"
+            },
+            "type": "array",
+            "title": "Translations"
+          },
+          "grammar": {
+            "items": {
+              "$ref": "#/components/schemas/GrammaticalFeatureResponse"
+            },
+            "type": "array",
+            "title": "Grammar"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "segmentId",
+          "surface",
+          "kind"
+        ],
+        "title": "SegmentAnalysisResponse"
+      },
+      "SubtitleCueRequest": {
+        "properties": {
+          "cueId": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Cueid"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "contextBefore": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contextbefore"
+          },
+          "contextAfter": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contextafter"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cueId",
+          "text"
+        ],
+        "title": "SubtitleCueRequest"
+      },
+      "TranslateLineRequest": {
+        "properties": {
+          "sourceLanguage": {
+            "type": "string",
+            "minLength": 2,
+            "title": "Sourcelanguage"
+          },
+          "targetLanguage": {
+            "type": "string",
+            "minLength": 2,
+            "title": "Targetlanguage"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sourceLanguage",
+          "targetLanguage",
+          "text"
+        ],
+        "title": "TranslateLineRequest"
+      },
+      "TranslateLineResponse": {
+        "properties": {
+          "sourceText": {
+            "type": "string",
+            "title": "Sourcetext"
+          },
+          "translatedText": {
+            "type": "string",
+            "title": "Translatedtext"
+          },
+          "sourceLanguage": {
+            "type": "string",
+            "title": "Sourcelanguage"
+          },
+          "targetLanguage": {
+            "type": "string",
+            "title": "Targetlanguage"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "isMock": {
+            "type": "boolean",
+            "title": "Ismock"
+          },
+          "tokenTranslations": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Tokentranslations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sourceText",
+          "translatedText",
+          "sourceLanguage",
+          "targetLanguage",
+          "provider",
+          "isMock",
+          "tokenTranslations"
+        ],
+        "title": "TranslateLineResponse"
+      },
+      "TranslationCandidateResponse": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "contextual",
+              "literal"
+            ],
+            "title": "Kind"
+          },
+          "isPrimary": {
+            "type": "boolean",
+            "title": "Isprimary"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "kind",
+          "isPrimary"
+        ],
+        "title": "TranslationCandidateResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

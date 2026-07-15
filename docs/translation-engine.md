@@ -38,7 +38,10 @@ The next translation architecture should use:
 - Structured JSON responses containing line translation and token-level translations.
 - Request batching and caching to control inference cost.
 
-The first open-weight model candidate is **Qwen3-4B-Instruct** because it is multilingual, instruction-tuned, commercially usable under Apache 2.0, and small enough to test before moving to hosted inference.
+An initial open-weight benchmark candidate is **Qwen3-4B** because its Apache 2.0
+license is compatible with the product direction and its size is practical for
+early hosted tests. It is not an architecture decision: quality, structured-output
+reliability, latency, and real inference cost must be measured against alternatives.
 
 ## Alternatives Considered
 

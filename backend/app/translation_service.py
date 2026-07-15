@@ -2,8 +2,6 @@ import re
 import unicodedata
 from functools import lru_cache
 
-from argostranslate import translate
-
 from app.models import TranslateLineRequest, TranslateLineResponse
 
 WORD_PATTERN = re.compile(r"[A-Za-zÀ-ÖØ-öø-ÿ'’-]+")
@@ -48,6 +46,10 @@ def translate_tokens(text: str, source_language: str, target_language: str) -> d
 
 @lru_cache(maxsize=2048)
 def translate_text(text: str, source_language: str, target_language: str) -> str:
+    # Keep the legacy endpoint import-light. Argos is loaded only when the
+    # deprecated endpoint receives an actual translation request.
+    from argostranslate import translate
+
     return translate.translate(text, source_language, target_language)
 
 

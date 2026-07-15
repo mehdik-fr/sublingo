@@ -57,7 +57,7 @@ This local backend is an integration experiment. It proves the extension can cal
 - Interactive words and expressions
 - Minimal tooltip with translation details
 - Small local French/English dictionary for the first version
-- Python API later for context-aware language help
+- Versioned Python API for context-aware language help
 
 ## Tech Direction
 
@@ -65,11 +65,13 @@ This local backend is an integration experiment. It proves the extension can cal
 - Python and FastAPI for the translation backend
 - Argos Translate as the first local integration experiment
 - Hosted open-weight model inference as the target product direction
+- OpenAPI as the canonical extension/backend contract
 - Lightweight tests as soon as core parsing logic appears
 
 ## Status
 
-Local subtitle prototype complete. YouTube caption detection and local backend integration are in progress.
+Local subtitle prototype complete. The first versioned batch contract and provider
+boundary are in place; extension migration and hosted inference remain in progress.
 
 ## Roadmap
 
