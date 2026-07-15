@@ -2,9 +2,9 @@
 
 Sublingo needs full-language subtitle translation without paid API usage during the early development phase.
 
-## Current Experimental Choice
+## Historical Experiment
 
-The first local translation engine target is **Argos Translate**.
+The first local translation engine target was **Argos Translate**.
 
 Why:
 
@@ -38,10 +38,18 @@ The next translation architecture should use:
 - Structured JSON responses containing line translation and token-level translations.
 - Request batching and caching to control inference cost.
 
-An initial open-weight benchmark candidate is **Qwen3-4B** because its Apache 2.0
-license is compatible with the product direction and its size is practical for
-early hosted tests. It is not an architecture decision: quality, structured-output
-reliability, latency, and real inference cost must be measured against alternatives.
+The first locally available benchmark candidate is **Qwen2.5-7B-Instruct**, exposed
+as `qwen2.5:7b` by Ollama. Its recorded Apache 2.0 license is compatible with the
+potential commercial direction. The installed `qwen2.5:3b` is excluded by the
+evaluation harness because its Qwen Research License is not suitable for that goal.
+
+On the current CPU-only computer, an early four-cue run produced valid structured
+output for every cue in about 61 seconds total, with an intentionally simple signal
+recall of 0.89. Stricter segment requirements exposed inconsistent confidence,
+source-copying, missing segment translations, and an invented cue identifier.
+Single-cue attempts took between 85 and 102 seconds. This candidate is useful for
+integration screening but is not validated for production quality or latency. GPU
+benchmarking and human evaluation are required before model selection.
 
 ## Alternatives Considered
 
@@ -69,10 +77,11 @@ It is not a first implementation target.
 2. Connect the extension to the local backend.
 3. Replace the mock provider with Argos Translate.
 4. Start with French-to-English because the local model is easier to validate.
-5. Add caching once real translation calls are working.
+5. Add extension batching, prefetching, and context-sensitive caching.
 6. Use the local workflow to validate extension/backend integration.
-7. Replace the product target with a hosted open-weight model provider.
-8. Compare open-weight LLM candidates using the same structured response contract.
+7. Add an Ollama adapter that refuses absent models instead of downloading them.
+8. Compare commercially compatible open-weight candidates using the same structured response contract.
+9. Benchmark the shortlist on self-hosted GPU infrastructure before selecting a model.
 
 ## Accepted Limitations
 

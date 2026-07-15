@@ -30,6 +30,19 @@ class SubtitleAnalysisService:
                 "Provider must return every cue exactly once and preserve batch order"
             )
 
+        for input_cue, analyzed_cue in zip(batch.cues, cues, strict=True):
+            if analyzed_cue.source_text != input_cue.text:
+                raise InvalidProviderResponseError("Provider changed the source subtitle text")
+
+            primary_count = sum(
+                translation.is_primary for translation in analyzed_cue.translations
+            )
+
+            if primary_count != 1:
+                raise InvalidProviderResponseError(
+                    "Provider must return exactly one primary cue translation"
+                )
+
         return AnalysisResult(
             analysis_id=str(uuid4()),
             source_language=batch.source_language,

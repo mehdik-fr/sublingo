@@ -1,0 +1,16 @@
+[
+  {
+    "ollamaName": "qwen2.5:7b",
+    "upstreamModel": "Qwen/Qwen2.5-7B-Instruct",
+    "license": "Apache-2.0",
+    "commercialUse": true,
+    "source": "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct"
+  },
+  {
+    "ollamaName": "qwen2.5:3b",
+    "upstreamModel": "Qwen/Qwen2.5-3B-Instruct",
+    "license": "Qwen Research License",
+    "commercialUse": false,
+    "source": "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct"
+  }
+]

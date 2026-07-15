@@ -4,28 +4,29 @@ FastAPI backend for versioned subtitle analysis.
 
 The backend exists so the browser extension can stay lightweight while translation and language analysis run outside the content script.
 
-The current Argos runtime remains a local development provider. The versioned API,
-service layer, and provider boundary are designed to migrate to hosted inference
-without changing the extension contract.
+The default provider is deterministic and requires no model. The same versioned API
+can optionally use Argos or an already-installed Ollama model without changing the
+extension contract.
 
 ## Current Scope
 
 - Health check endpoint
 - Versioned batch endpoint at `POST /v1/subtitles/analyze`
 - Provider-independent response contract with multilingual optional fields
-- Deprecated French-to-English endpoint at `POST /translate-line`
+- Configurable `development`, `argos`, and `ollama` providers
 - No paid API usage
-- Argos Translate model installed outside the repository
+- No automatic model download
+- Deprecated French-to-English endpoint at `POST /translate-line`
 
 ## Known Limitations
 
 - The service must still be started manually during development.
-- Translation models are installed locally and are not packaged with the extension.
+- Optional translation models are installed locally and are not packaged with the extension.
 - The Argos v1 provider returns whole-line translations and no segment analysis.
-- On the current Windows development environment, a real Argos smoke request can
-  exceed 60 seconds; deterministic tests validate the boundary but do not claim
-  production inference latency.
-- The target product architecture is a hosted backend using an open-weight model provider.
+- Local Ollama evaluation on this CPU-only Windows computer is useful for contract
+  and quality screening, not production latency estimates.
+- The target product architecture is a self-hosted backend using a commercially
+  compatible open-weight model on GPU infrastructure.
 - Production authentication, rate limiting, caching, CORS, and observability are not implemented yet.
 
 ## Setup
@@ -45,19 +46,27 @@ For contract and API tests, install the development requirements instead:
 pip install -r requirements-dev.txt
 ```
 
-## Install The Translation Model
-
-Argos Translate keeps models outside the repository. Install the French-to-English model once on your machine:
-
-```powershell
-python -c "import argostranslate.package; argostranslate.package.update_package_index(); packages = argostranslate.package.get_available_packages(); package = next(item for item in packages if item.from_code == 'fr' and item.to_code == 'en'); argostranslate.package.install_from_path(package.download())"
-```
-
 ## Run
 
 ```powershell
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8765
 ```
+
+The default `development` provider returns deterministic fixture translations and
+is suitable for the extension and test suite without installing a model.
+
+To use a model already present in Ollama:
+
+```powershell
+$env:SUBLINGO_ANALYSIS_PROVIDER = "ollama"
+$env:SUBLINGO_OLLAMA_MODEL = "qwen2.5:7b"
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8765
+```
+
+Optional variables are `SUBLINGO_OLLAMA_BASE_URL` and
+`SUBLINGO_OLLAMA_TIMEOUT_SECONDS`. The provider checks `/api/tags` first and fails
+with an explicit error if the requested model is absent. It never invokes a model
+download.
 
 Then open:
 
@@ -75,8 +84,8 @@ Invoke-RestMethod `
   -Body '{"schemaVersion":"1.0","sourceLanguage":"fr","targetLanguage":"en","cues":[{"cueId":"cue-1","text":"Regardez la fleur de plus près."}]}'
 ```
 
-The Argos development provider currently fills the whole-line `translations`
-array. Segment and expression analysis are reserved for the hosted provider.
+The response schema is provider-independent and can include primary translations,
+word or expression segments, grammar metadata, script variants, and confidence.
 
 ## Legacy Line Translation
 
@@ -88,8 +97,8 @@ Invoke-RestMethod `
   -Body '{"sourceLanguage":"fr","targetLanguage":"en","text":"Regardez la fleur de plus pres."}'
 ```
 
-The response uses the local Argos Translate model when it is installed on the machine.
-This endpoint is deprecated and remains available only while the extension migrates.
+The response uses the local Argos Translate model when that provider and model are
+configured. This endpoint is deprecated; the extension now uses the v1 batch API.
 
 ## Tests And Contract Generation
 
@@ -105,3 +114,6 @@ From the repository root:
 .\backend\.venv\Scripts\python.exe -B .\backend\scripts\export_openapi.py
 npm run contract:generate
 ```
+
+The local Ollama evaluation harness only accepts registered, commercially compatible
+models that are already installed. See [evaluation/README.md](evaluation/README.md).

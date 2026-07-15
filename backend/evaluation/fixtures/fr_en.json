@@ -1,0 +1,26 @@
+[
+  {
+    "id": "literal-visual",
+    "source": "Regardez la fleur de plus près.",
+    "reference": "Look at the flower more closely.",
+    "expectedSignals": ["look", "flower", "closely"]
+  },
+  {
+    "id": "idiom-rabbit",
+    "source": "Il a posé un lapin à son ami.",
+    "reference": "He stood his friend up.",
+    "expectedSignals": ["stood", "friend"]
+  },
+  {
+    "id": "recent-past",
+    "source": "Je viens de finir mes devoirs.",
+    "reference": "I have just finished my homework.",
+    "expectedSignals": ["just", "finished", "homework"]
+  },
+  {
+    "id": "colloquial-success",
+    "source": "Ça marche !",
+    "reference": "That works!",
+    "expectedSignals": ["works"]
+  }
+]

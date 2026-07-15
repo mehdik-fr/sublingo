@@ -68,12 +68,50 @@ class IncompleteAnalysisProvider(FakeAnalysisProvider):
         return ()
 
 
+class MissingPrimaryTranslationProvider(FakeAnalysisProvider):
+    def analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
+        return tuple(
+            AnalyzedCue(
+                cue_id=cue.cue_id,
+                source_text=cue.text,
+                translations=(
+                    TranslationCandidate(
+                        text=f"Translated: {cue.text}",
+                        kind=TranslationKind.CONTEXTUAL,
+                    ),
+                ),
+            )
+            for cue in batch.cues
+        )
+
+
 def create_client(provider: FakeAnalysisProvider) -> TestClient:
     service = SubtitleAnalysisService(provider)
     return TestClient(create_app(service))
 
 
 class SubtitleAnalysisApiTests(unittest.TestCase):
+    def test_default_app_is_immediately_testable_without_model_runtime(self) -> None:
+        response = TestClient(create_app()).post(
+            "/v1/subtitles/analyze",
+            json={
+                "schemaVersion": "1.0",
+                "sourceLanguage": "fr",
+                "targetLanguage": "en",
+                "cues": [
+                    {"cueId": "cue-1", "text": "Regardez la fleur de plus près."}
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["provider"]["name"], "development")
+        self.assertEqual(
+            payload["cues"][0]["translations"][0]["text"],
+            "Look at the flower more closely.",
+        )
+
     def test_health_check_does_not_require_inference(self) -> None:
         response = create_client(FakeAnalysisProvider()).get("/health")
 
@@ -181,6 +219,19 @@ class SubtitleAnalysisApiTests(unittest.TestCase):
 
     def test_rejects_incomplete_provider_output(self) -> None:
         response = create_client(IncompleteAnalysisProvider()).post(
+            "/v1/subtitles/analyze",
+            json={
+                "schemaVersion": "1.0",
+                "sourceLanguage": "fr",
+                "targetLanguage": "en",
+                "cues": [{"cueId": "cue-1", "text": "Bonjour"}],
+            },
+        )
+
+        self.assertEqual(response.status_code, 502)
+
+    def test_rejects_provider_output_without_one_primary_translation(self) -> None:
+        response = create_client(MissingPrimaryTranslationProvider()).post(
             "/v1/subtitles/analyze",
             json={
                 "schemaVersion": "1.0",

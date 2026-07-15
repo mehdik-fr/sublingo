@@ -46,9 +46,15 @@ Then load the `extension/` folder from `chrome://extensions`.
 
 The popup exposes a minimal active/inactive toggle backed by extension storage.
 
-When the local backend is running, the extension can request a full-line French-to-English translation from Argos Translate. The tooltip also displays a first token-level translation when the backend can provide one.
+When the local backend is running, the extension batches subtitle cues through the
+versioned analysis API. Repeated requests are cached in the extension and the local
+demo prefetches the next cue. The backend uses a deterministic development provider
+by default, so the complete integration remains testable without an AI model.
 
-This local backend is an integration experiment. It proves the extension can call an external translation layer, but it is not the final turnkey architecture because it requires a Python process and local model setup.
+An optional Ollama provider can evaluate an open-weight model that is already
+installed on the machine. Sublingo never downloads a model automatically and does
+not depend on paid AI APIs. The eventual operating cost is intended to be limited
+to self-hosted infrastructure and GPU capacity.
 
 ## Planned MVP
 
@@ -56,22 +62,24 @@ This local backend is an integration experiment. It proves the extension can cal
 - Subtitle detection on a local test page, then YouTube watch pages
 - Interactive words and expressions
 - Minimal tooltip with translation details
-- Small local French/English dictionary for the first version
+- Contextual word and expression segments supplied by the backend API
 - Versioned Python API for context-aware language help
 
 ## Tech Direction
 
 - TypeScript for the browser extension
 - Python and FastAPI for the translation backend
-- Argos Translate as the first local integration experiment
-- Hosted open-weight model inference as the target product direction
+- Deterministic fixtures during migration, moving to automated tests only
+- Self-hosted open-weight inference as the target product direction
 - OpenAPI as the canonical extension/backend contract
 - Lightweight tests as soon as core parsing logic appears
 
 ## Status
 
-Local subtitle prototype complete. The first versioned batch contract and provider
-boundary are in place; extension migration and hosted inference remain in progress.
+Local subtitle prototype complete. The extension now uses the versioned batch API
+with client-side batching, prefetching, and caching. A guarded Ollama provider and
+local evaluation harness can screen already-installed open-weight models; hosted
+GPU selection remains in progress.
 
 ## Roadmap
 

@@ -2,22 +2,25 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import router as v1_router
+from app.core.config import Settings
 from app.models import HealthResponse, TranslateLineRequest, TranslateLineResponse
-from app.providers.argos import ArgosAnalysisProvider
+from app.providers.factory import create_analysis_provider
 from app.services.subtitle_analysis import SubtitleAnalysisService
 from app.translation_service import translate_line
 
 
 def create_app(
     analysis_service: SubtitleAnalysisService | None = None,
+    settings: Settings | None = None,
 ) -> FastAPI:
     application = FastAPI(
         title="Sublingo Backend",
         version="0.2.0",
         description="Versioned subtitle analysis API for the Sublingo browser extension.",
     )
+    resolved_settings = settings or Settings.from_environment()
     application.state.analysis_service = analysis_service or SubtitleAnalysisService(
-        ArgosAnalysisProvider()
+        create_analysis_provider(resolved_settings)
     )
 
     application.add_middleware(

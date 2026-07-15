@@ -5,6 +5,7 @@ node_modules/
 dist/
 build/
 coverage/
+backend/evaluation/reports/*.json
 
 # Local media files
 *.mp4

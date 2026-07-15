@@ -11,9 +11,10 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["extension/src", "vite.config.ts"]
+  "include": ["extension/src", "extension/tests", "vite.config.ts"]
 }

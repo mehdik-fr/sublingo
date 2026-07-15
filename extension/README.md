@@ -27,7 +27,7 @@ At this stage, YouTube support is intentionally narrow:
 
 - standard watch pages only
 - visible native captions required
-- local dictionary only, no remote translation provider yet
+- visible native captions are analyzed through the local backend when enabled
 
 The extension popup keeps a minimal product surface:
 
@@ -36,10 +36,28 @@ The extension popup keeps a minimal product surface:
 
 ## Local Backend
 
-The content script can call the local backend at:
+The content script calls the versioned batch endpoint at:
 
 ```txt
-http://127.0.0.1:8765/translate-line
+http://127.0.0.1:8765/v1/subtitles/analyze
 ```
 
-The backend currently uses Argos Translate for French-to-English translation when the local model is installed.
+Requests and responses use the TypeScript declarations generated from
+`contracts/openapi.json`. A short queue batches nearby cues, coalesces duplicate
+requests, prefetches the next local-demo cue, and caches analyses for 30 minutes.
+The cache key includes the language pair and surrounding context.
+
+The backend defaults to a deterministic provider, so no model or paid AI API is
+required for development. Ollama is optional and only uses an already-installed
+open-weight model.
+
+Run extension tests, type checking, and the production build from the repository
+root with:
+
+```bash
+npm run check
+```
+
+After every build, open `chrome://extensions` and click **Reload** on Sublingo
+before refreshing the demo page. Load the `extension/` directory itself, not
+`extension/dist/`, because the manifest and popup live at the extension root.

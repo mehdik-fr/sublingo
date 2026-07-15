@@ -8,8 +8,10 @@
     "build": "vite build",
     "contract:generate": "npm exec --yes --package=openapi-typescript@7.13.0 --package=typescript@5.9.3 -- openapi-typescript contracts/openapi.json -o extension/src/api/generated.ts",
     "contract:check": "npm exec --yes --package=openapi-typescript@7.13.0 --package=typescript@5.9.3 -- openapi-typescript contracts/openapi.json -o extension/src/api/generated.ts --check",
+    "check:extension-bundle": "node scripts/check-extension-bundle.mjs",
+    "test:extension": "node --test --experimental-strip-types extension/tests/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm run build"
+    "check": "npm run test:extension && npm run typecheck && npm run build && npm run check:extension-bundle"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

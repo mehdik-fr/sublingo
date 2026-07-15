@@ -22,6 +22,9 @@ This roadmap is intentionally small and will evolve as the project becomes clear
 
 ## Phase 4 - Tooltip and Dictionary
 
+Status: historical prototype. The embedded dictionary proved the interaction model
+and is scheduled for removal from the production bundle.
+
 - Add a small, non-intrusive tooltip
 - Use a local French/Korean dictionary
 - Start testing tokenizer and lookup behavior
@@ -60,18 +63,29 @@ This roadmap is intentionally small and will evolve as the project becomes clear
 ## Phase 10 - Hosted Open-Weight Architecture
 
 Status: in progress. The versioned batch contract, provider protocol, generated
-TypeScript declarations, and deterministic API tests are now in place.
+TypeScript declarations, extension migration, guarded Ollama adapter, and local
+evaluation harness are now in place.
 
-- Replace the manually started local backend with a hosted backend target
-- Add a provider interface for translation engines
-- Evaluate an open-weight instruction model for structured subtitle analysis
-- Start with a small multilingual model before trying larger hosted models
-- Return structured JSON with line translation, token translations, and confidence metadata
+- [ ] Replace the manually started local backend with a hosted backend target
+- [x] Add a provider interface for translation engines
+- [x] Evaluate an already-installed open-weight instruction model for structured subtitle analysis
+- [ ] Benchmark shortlisted models on hosted GPU hardware
+- [x] Return structured JSON with line translation, token translations, and confidence metadata
+
+## Phase 12 - API-Only Product Data Path
+
+Status: next checkpoint. See [production-data-path-audit.md](production-data-path-audit.md).
+
+- [ ] Remove the embedded dictionary from the production extension bundle
+- [ ] Make API segments the only source for word and expression cards
+- [ ] Keep deterministic fixtures only in automated tests
+- [ ] Require an explicit non-fixture provider outside tests
+- [ ] Validate the extension on real YouTube watch-page navigation
 
 ## Phase 11 - Cache and Language Analysis
 
-- Cache repeated translations locally
+- [x] Cache repeated translations locally
 - Cache repeated translations on the backend
-- Batch subtitle lines to reduce inference overhead
+- [x] Batch subtitle lines to reduce inference overhead
 - Add simple linguistic metadata after contextual translation is stable
-- Add expression-level context after token-level translation works reliably
+- [x] Carry neighboring-cue context and support expression segments in the contract

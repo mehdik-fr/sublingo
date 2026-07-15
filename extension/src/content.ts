@@ -1,5 +1,11 @@
 import type { PreparedDictionaryEntry } from "./dictionary";
-import { translateSubtitleLine, type SubtitleTranslation } from "./translation-client";
+import {
+  clearSubtitleTranslationCache,
+  prefetchSubtitleLine,
+  translateSubtitleLine,
+  type SubtitleTranslation
+} from "./translation-client";
+import { hasRomanization, isRedundantDefinition } from "./tooltip-content";
 import { findEntryAt, isWord, splitSegments } from "./tokenizer";
 
 const ROOT_ID = "sublingo-extension-root";
@@ -11,6 +17,8 @@ const SETTINGS_KEY = "settings";
 
 type ExtensionSettings = {
   enabled: boolean;
+  sourceLanguage: string;
+  targetLanguage: string;
 };
 
 type PlatformAdapter = {
@@ -51,6 +59,8 @@ type ExtensionState = {
   hideTooltipTimer: number | null;
   pinnedToken: HTMLElement | null;
   isPlatformSyncScheduled: boolean;
+  sourceLanguage: string;
+  targetLanguage: string;
 };
 
 const platforms: PlatformAdapter[] = [
@@ -89,7 +99,9 @@ const state: ExtensionState = {
   tooltipElement: null,
   hideTooltipTimer: null,
   pinnedToken: null,
-  isPlatformSyncScheduled: false
+  isPlatformSyncScheduled: false,
+  sourceLanguage: "fr",
+  targetLanguage: "en"
 };
 
 function bootstrap(): void {
@@ -406,7 +418,25 @@ function ensureDemoTrackBridge(): void {
 
   const syncFromTrack = () => {
     const cue = track.activeCues?.[0] ?? null;
-    subtitle.textContent = getCueText(cue);
+    const cueText = getCueText(cue);
+    subtitle.textContent = cueText;
+
+    if (cue && track.cues) {
+      const cues = Array.from(track.cues);
+      const activeIndex = cues.indexOf(cue);
+      const nextCueText = activeIndex >= 0 ? getCueText(cues[activeIndex + 1] ?? null) : "";
+
+      if (nextCueText) {
+        prefetchSubtitleLine(
+          nextCueText,
+          {
+            sourceLanguage: state.sourceLanguage,
+            targetLanguage: state.targetLanguage
+          },
+          { contextBefore: cueText }
+        );
+      }
+    }
   };
 
   track.mode = "hidden";
@@ -481,8 +511,9 @@ function syncSubtitleRoot(element: HTMLElement): void {
     return;
   }
 
+  const contextBefore = rootState.lastRenderedText || undefined;
   renderInteractiveSubtitle(element, text, rootState);
-  requestSubtitleTranslation(element, text, rootState);
+  requestSubtitleTranslation(element, text, rootState, contextBefore);
 }
 
 function renderInteractiveSubtitle(
@@ -610,22 +641,29 @@ function renderDictionaryTooltip(entry: TokenTooltipData, pinned: boolean): void
 
   state.tooltipElement.innerHTML = `
     <div class="tooltip-header">
-      <p class="tooltip-title">${escapeHtml(entry.source)} -> ${escapeHtml(entry.target)}</p>
+      <p class="tooltip-title">${escapeHtml(entry.source)}</p>
       ${pinned ? '<button class="tooltip-close" type="button" data-close-tooltip aria-label="Close tooltip">x</button>' : ""}
     </div>
     <div class="tooltip-grid">
-      <span class="tooltip-label">Target</span>
+      <span class="tooltip-label">Translation</span>
       <p class="tooltip-value">${escapeHtml(entry.target)}</p>
-      <span class="tooltip-label">Romanization</span>
-      <p class="tooltip-value">${escapeHtml(entry.romanization)}</p>
+      ${
+        hasRomanization(entry.romanization)
+          ? `<span class="tooltip-label">Romanization</span>
+             <p class="tooltip-value">${escapeHtml(entry.romanization)}</p>`
+          : ""
+      }
       <span class="tooltip-label">Grammar</span>
       <p class="tooltip-value">${escapeHtml(entry.grammar)}</p>
     </div>
-    <p class="tooltip-body">${escapeHtml(entry.definition)}</p>
     ${
-      entry.lineTranslation
-        ? `<p class="tooltip-line">${escapeHtml(entry.lineTranslation)}</p>
-           <p class="tooltip-meta">${escapeHtml(entry.provider ?? "local")} ${entry.isMock ? "(mock)" : ""}</p>`
+      isRedundantDefinition(entry.definition, entry.target)
+        ? ""
+        : `<p class="tooltip-body">${escapeHtml(entry.definition)}</p>`
+    }
+    ${
+      pinned && entry.provider
+        ? `<p class="tooltip-meta">${escapeHtml(entry.provider)} ${entry.isMock ? "(mock)" : ""}</p>`
         : ""
     }
     ${
@@ -680,7 +718,7 @@ function createDictionaryTooltipData(
     grammar: entry.grammar,
     definition: entry.definition,
     pronunciation: entry.pronunciation,
-    lineTranslation: getLineTranslation(rootState),
+    lineTranslation: null,
     provider: rootState.translation?.provider ?? null,
     isMock: rootState.translation?.isMock ?? false
   };
@@ -703,10 +741,6 @@ function createLineTooltipData(token: string, rootState: SubtitleRootState): Tok
   };
 }
 
-function getLineTranslation(rootState: SubtitleRootState): string | null {
-  return rootState.translation?.translatedText ?? null;
-}
-
 function getTokenTranslation(token: string, rootState: SubtitleRootState): string | null {
   const key = normalizeTooltipToken(token);
   return rootState.translation?.tokenTranslations[key] ?? null;
@@ -724,7 +758,8 @@ function normalizeTooltipToken(value: string): string {
 async function requestSubtitleTranslation(
   element: HTMLElement,
   text: string,
-  rootState: SubtitleRootState
+  rootState: SubtitleRootState,
+  contextBefore?: string
 ): Promise<void> {
   const requestId = rootState.translationRequestId + 1;
   rootState.translationRequestId = requestId;
@@ -732,7 +767,10 @@ async function requestSubtitleTranslation(
   rootState.translationError = null;
 
   try {
-    const translation = await translateSubtitleLine(text);
+    const translation = await translateSubtitleLine(text, {
+      sourceLanguage: state.sourceLanguage,
+      targetLanguage: state.targetLanguage
+    }, { contextBefore });
 
     if (rootState.translationRequestId !== requestId || rootState.lastRenderedText !== text) {
       return;
@@ -745,7 +783,7 @@ async function requestSubtitleTranslation(
       return;
     }
 
-    rootState.translationError = "Local translation backend unavailable.";
+    rootState.translationError = "Subtitle analysis backend unavailable.";
     renderInteractiveSubtitle(element, text, rootState);
   }
 }
@@ -914,7 +952,22 @@ function handleStorageChanged(
 
 function applySettings(settings: ExtensionSettings): void {
   const didEnabledChange = state.isEnabled !== settings.enabled;
+  const didLanguageChange =
+    state.sourceLanguage !== settings.sourceLanguage ||
+    state.targetLanguage !== settings.targetLanguage;
   state.isEnabled = settings.enabled;
+  state.sourceLanguage = settings.sourceLanguage;
+  state.targetLanguage = settings.targetLanguage;
+
+  if (didLanguageChange) {
+    clearSubtitleTranslationCache();
+
+    for (const [element, rootState] of state.rootStates) {
+      rootState.lastRenderedText = "";
+      rootState.translation = null;
+      syncSubtitleRoot(element);
+    }
+  }
 
   if (didEnabledChange) {
     syncPlatform();
@@ -930,14 +983,18 @@ async function readSettings(): Promise<ExtensionSettings> {
 }
 
 function parseSettings(value: unknown): ExtensionSettings {
-  if (isRecord(value) && typeof value.enabled === "boolean") {
+  if (isRecord(value)) {
     return {
-      enabled: value.enabled
+      enabled: typeof value.enabled === "boolean" ? value.enabled : true,
+      sourceLanguage: typeof value.sourceLanguage === "string" ? value.sourceLanguage : "fr",
+      targetLanguage: typeof value.targetLanguage === "string" ? value.targetLanguage : "en"
     };
   }
 
   return {
-    enabled: true
+    enabled: true,
+    sourceLanguage: "fr",
+    targetLanguage: "en"
   };
 }
 

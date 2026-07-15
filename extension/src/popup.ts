@@ -2,11 +2,17 @@ const SETTINGS_KEY = "settings";
 
 type ExtensionSettings = {
   enabled: boolean;
+  sourceLanguage: string;
+  targetLanguage: string;
 };
 
 const defaultSettings: ExtensionSettings = {
-  enabled: true
+  enabled: true,
+  sourceLanguage: "fr",
+  targetLanguage: "en"
 };
+
+let currentSettings = defaultSettings;
 
 const enableToggle = mustQuery<HTMLInputElement>("[data-enable-toggle]");
 const toggleLabel = mustQuery<HTMLElement>("[data-toggle-label]");
@@ -16,12 +22,14 @@ void bootstrap();
 
 async function bootstrap(): Promise<void> {
   const settings = await readSettings();
+  currentSettings = settings;
   renderToggle(settings);
   enableToggle.addEventListener("change", handleToggleChange);
 }
 
 async function handleToggleChange(): Promise<void> {
   const settings: ExtensionSettings = {
+    ...currentSettings,
     enabled: enableToggle.checked
   };
 
@@ -29,6 +37,7 @@ async function handleToggleChange(): Promise<void> {
     [SETTINGS_KEY]: settings
   });
 
+  currentSettings = settings;
   renderToggle(settings);
 }
 
@@ -36,9 +45,11 @@ async function readSettings(): Promise<ExtensionSettings> {
   const result = await chrome.storage.sync.get(SETTINGS_KEY);
   const value = result[SETTINGS_KEY];
 
-  if (isRecord(value) && typeof value.enabled === "boolean") {
+  if (isRecord(value)) {
     return {
-      enabled: value.enabled
+      enabled: typeof value.enabled === "boolean" ? value.enabled : true,
+      sourceLanguage: typeof value.sourceLanguage === "string" ? value.sourceLanguage : "fr",
+      targetLanguage: typeof value.targetLanguage === "string" ? value.targetLanguage : "en"
     };
   }
 
@@ -46,10 +57,11 @@ async function readSettings(): Promise<ExtensionSettings> {
 }
 
 function renderToggle(settings: ExtensionSettings): void {
+  const languagePair = `${settings.sourceLanguage.toUpperCase()} → ${settings.targetLanguage.toUpperCase()}`;
   enableToggle.checked = settings.enabled;
   if (settings.enabled) {
     toggleLabel.textContent = "Sublingo is active";
-    toggleHint.textContent = "Interactive subtitles are enabled on supported pages.";
+    toggleHint.textContent = `Interactive subtitles are enabled (${languagePair}).`;
     return;
   }
 
