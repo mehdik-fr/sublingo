@@ -16,52 +16,52 @@ export type PreparedDictionaryEntry = DictionaryEntry & {
 export const dictionary: DictionaryEntry[] = [
   {
     source: "fleur",
-    target: "kkoch",
-    romanization: "kkoch",
+    target: "flower",
+    romanization: "-",
     grammar: "noun",
     definition: "A flower.",
-    pronunciation: "kkoch"
+    pronunciation: "flower"
   },
   {
     source: "s'ouvre",
     displaySource: "s'ouvrir",
-    target: "pida",
-    romanization: "pida",
+    target: "opens",
+    romanization: "-",
     grammar: "verb",
-    definition: "To open or bloom. For flowers, Korean often uses pida.",
-    pronunciation: "pida"
+    definition: "To open. For flowers, it can also mean to bloom.",
+    pronunciation: "opens"
   },
   {
     source: "regardez",
-    target: "boda",
-    romanization: "boda",
+    target: "look",
+    romanization: "-",
     grammar: "verb",
     definition: "To see, watch, or look at.",
-    pronunciation: "boda"
+    pronunciation: "look"
   },
   {
     source: "de plus pres",
     displaySource: "de plus pres",
-    target: "deo gakkai",
-    romanization: "deo gakkai",
+    target: "more closely",
+    romanization: "-",
     grammar: "expression",
     definition: "From closer up, or more closely.",
-    pronunciation: "deo gakkai"
+    pronunciation: "more closely"
   },
   {
     source: "couleurs",
-    target: "saek",
-    romanization: "saek",
+    target: "colors",
+    romanization: "-",
     grammar: "noun",
     definition: "Colors.",
-    pronunciation: "saek"
+    pronunciation: "colors"
   },
   {
     source: "lentement",
-    target: "cheoncheonhi",
-    romanization: "cheoncheonhi",
+    target: "slowly",
+    romanization: "-",
     grammar: "adverb",
     definition: "Slowly.",
-    pronunciation: "cheoncheonhi"
+    pronunciation: "slowly"
   }
 ];

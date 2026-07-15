@@ -8,6 +8,7 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       input: {
+        background: "extension/src/background.ts",
         content: "extension/src/content.ts",
         popup: "extension/src/popup.ts"
       },

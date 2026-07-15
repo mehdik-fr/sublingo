@@ -1,4 +1,5 @@
 import type { PreparedDictionaryEntry } from "./dictionary";
+import { translateSubtitleLine, type SubtitleTranslation } from "./translation-client";
 import { findEntryAt, isWord, splitSegments } from "./tokenizer";
 
 const ROOT_ID = "sublingo-extension-root";
@@ -22,6 +23,22 @@ type SubtitleRootState = {
   isRendering: boolean;
   lastRenderedText: string;
   observer: MutationObserver;
+  translation: SubtitleTranslation | null;
+  translationError: string | null;
+  translationRequestId: number;
+};
+
+type TokenTooltipData = {
+  kind: "dictionary" | "line";
+  source: string;
+  target: string;
+  romanization: string;
+  grammar: string;
+  definition: string;
+  pronunciation: string;
+  lineTranslation: string | null;
+  provider: string | null;
+  isMock: boolean;
 };
 
 type ExtensionState = {
@@ -179,6 +196,21 @@ function createTooltipRoot(): void {
         font-size: 13px;
         line-height: 1.45;
         margin: 0;
+      }
+
+      .tooltip-line {
+        border-top: 1px solid rgba(17, 24, 39, 0.1);
+        color: #344054;
+        font-size: 13px;
+        line-height: 1.45;
+        margin: 12px 0 0;
+        padding-top: 10px;
+      }
+
+      .tooltip-meta {
+        color: #98a2b3;
+        font-size: 11px;
+        margin: 6px 0 0;
       }
 
       .listen-button {
@@ -405,7 +437,10 @@ function observeSubtitleRoot(element: HTMLElement): void {
     lastRenderedText: "",
     observer: new MutationObserver(() => {
       syncSubtitleRoot(element);
-    })
+    }),
+    translation: null,
+    translationError: null,
+    translationRequestId: 0
   };
 
   rootState.observer.observe(element, {
@@ -429,6 +464,8 @@ function syncSubtitleRoot(element: HTMLElement): void {
 
   if (!text) {
     rootState.lastRenderedText = "";
+    rootState.translation = null;
+    rootState.translationError = null;
 
     if (state.pinnedToken && element.contains(state.pinnedToken)) {
       closePinnedTooltip();
@@ -445,6 +482,7 @@ function syncSubtitleRoot(element: HTMLElement): void {
   }
 
   renderInteractiveSubtitle(element, text, rootState);
+  requestSubtitleTranslation(element, text, rootState);
 }
 
 function renderInteractiveSubtitle(
@@ -473,14 +511,16 @@ function renderInteractiveSubtitle(
 
     const match = findEntryAt(segments, index);
 
-    if (!match) {
-      fragment.append(document.createTextNode(segment));
+    hasInteractiveToken = true;
+
+    if (match) {
+      const label = segments.slice(index, match.endIndex + 1).join("");
+      fragment.append(createToken(createDictionaryTooltipData(match.entry, rootState), label));
+      index = match.endIndex;
       continue;
     }
 
-    hasInteractiveToken = true;
-    fragment.append(createToken(match.entry, segments.slice(index, match.endIndex + 1).join("")));
-    index = match.endIndex;
+    fragment.append(createToken(createLineTooltipData(segment, rootState), segment));
   }
 
   if (hasInteractiveToken) {
@@ -495,7 +535,7 @@ function renderInteractiveSubtitle(
   rootState.isRendering = false;
 }
 
-function createToken(entry: PreparedDictionaryEntry, label: string): HTMLElement {
+function createToken(entry: TokenTooltipData, label: string): HTMLElement {
   const token = document.createElement("span");
   token.className = "sublingo-token";
   token.setAttribute(TOKEN_ATTRIBUTE, "true");
@@ -524,7 +564,7 @@ function createToken(entry: PreparedDictionaryEntry, label: string): HTMLElement
   return token;
 }
 
-function showHoverTooltip(event: Event, entry: PreparedDictionaryEntry): void {
+function showHoverTooltip(event: Event, entry: TokenTooltipData): void {
   if (state.pinnedToken) {
     return;
   }
@@ -534,7 +574,7 @@ function showHoverTooltip(event: Event, entry: PreparedDictionaryEntry): void {
   positionTooltipNearEvent(event);
 }
 
-function pinTooltip(token: HTMLElement, entry: PreparedDictionaryEntry): void {
+function pinTooltip(token: HTMLElement, entry: TokenTooltipData): void {
   clearPinnedToken();
   state.pinnedToken = token;
   token.classList.add("sublingo-token-pinned");
@@ -550,14 +590,27 @@ function pinTooltip(token: HTMLElement, entry: PreparedDictionaryEntry): void {
   listenButton?.addEventListener("click", () => speak(entry.pronunciation));
 }
 
-function renderTooltip(entry: PreparedDictionaryEntry, pinned: boolean): void {
+function renderTooltip(entry: TokenTooltipData, pinned: boolean): void {
+  if (!state.tooltipElement) {
+    return;
+  }
+
+  if (entry.kind === "line") {
+    renderLineTooltip(entry, pinned);
+    return;
+  }
+
+  renderDictionaryTooltip(entry, pinned);
+}
+
+function renderDictionaryTooltip(entry: TokenTooltipData, pinned: boolean): void {
   if (!state.tooltipElement) {
     return;
   }
 
   state.tooltipElement.innerHTML = `
     <div class="tooltip-header">
-      <p class="tooltip-title">${escapeHtml(entry.displaySource ?? entry.source)} -> ${escapeHtml(entry.target)}</p>
+      <p class="tooltip-title">${escapeHtml(entry.source)} -> ${escapeHtml(entry.target)}</p>
       ${pinned ? '<button class="tooltip-close" type="button" data-close-tooltip aria-label="Close tooltip">x</button>' : ""}
     </div>
     <div class="tooltip-grid">
@@ -570,6 +623,12 @@ function renderTooltip(entry: PreparedDictionaryEntry, pinned: boolean): void {
     </div>
     <p class="tooltip-body">${escapeHtml(entry.definition)}</p>
     ${
+      entry.lineTranslation
+        ? `<p class="tooltip-line">${escapeHtml(entry.lineTranslation)}</p>
+           <p class="tooltip-meta">${escapeHtml(entry.provider ?? "local")} ${entry.isMock ? "(mock)" : ""}</p>`
+        : ""
+    }
+    ${
       pinned
         ? `<button class="listen-button" type="button" data-pronunciation="${escapeHtml(entry.pronunciation)}">Listen</button>`
         : ""
@@ -577,6 +636,118 @@ function renderTooltip(entry: PreparedDictionaryEntry, pinned: boolean): void {
   `;
 
   state.tooltipElement.classList.toggle("pinned", pinned);
+}
+
+function renderLineTooltip(entry: TokenTooltipData, pinned: boolean): void {
+  if (!state.tooltipElement) {
+    return;
+  }
+
+  state.tooltipElement.innerHTML = `
+    <div class="tooltip-header">
+      <p class="tooltip-title">${escapeHtml(entry.source)} -> ${escapeHtml(entry.target)}</p>
+      ${pinned ? '<button class="tooltip-close" type="button" data-close-tooltip aria-label="Close tooltip">x</button>' : ""}
+    </div>
+    ${
+      pinned && entry.lineTranslation
+        ? `<p class="tooltip-line">${escapeHtml(entry.lineTranslation)}</p>`
+        : ""
+    }
+    ${
+      pinned && entry.provider
+        ? `<p class="tooltip-meta">${escapeHtml(entry.provider)} ${entry.isMock ? "(mock)" : ""}</p>`
+        : ""
+    }
+    ${
+      pinned && entry.target !== "Translation loading"
+        ? `<button class="listen-button" type="button" data-pronunciation="${escapeHtml(entry.pronunciation)}">Listen</button>`
+        : ""
+    }
+  `;
+
+  state.tooltipElement.classList.toggle("pinned", pinned);
+}
+
+function createDictionaryTooltipData(
+  entry: PreparedDictionaryEntry,
+  rootState: SubtitleRootState
+): TokenTooltipData {
+  return {
+    kind: "dictionary",
+    source: entry.displaySource ?? entry.source,
+    target: entry.target,
+    romanization: entry.romanization,
+    grammar: entry.grammar,
+    definition: entry.definition,
+    pronunciation: entry.pronunciation,
+    lineTranslation: getLineTranslation(rootState),
+    provider: rootState.translation?.provider ?? null,
+    isMock: rootState.translation?.isMock ?? false
+  };
+}
+
+function createLineTooltipData(token: string, rootState: SubtitleRootState): TokenTooltipData {
+  const tokenTranslation = getTokenTranslation(token, rootState);
+
+  return {
+    kind: "line",
+    source: token,
+    target: tokenTranslation ?? "Translation loading",
+    romanization: "-",
+    grammar: "unknown",
+    definition: rootState.translationError ?? "Translation loading.",
+    pronunciation: tokenTranslation ?? token,
+    lineTranslation: null,
+    provider: rootState.translation?.provider ?? null,
+    isMock: rootState.translation?.isMock ?? false
+  };
+}
+
+function getLineTranslation(rootState: SubtitleRootState): string | null {
+  return rootState.translation?.translatedText ?? null;
+}
+
+function getTokenTranslation(token: string, rootState: SubtitleRootState): string | null {
+  const key = normalizeTooltipToken(token);
+  return rootState.translation?.tokenTranslations[key] ?? null;
+}
+
+function normalizeTooltipToken(value: string): string {
+  return value
+    .toLocaleLowerCase("fr-FR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['’]/g, "")
+    .trim();
+}
+
+async function requestSubtitleTranslation(
+  element: HTMLElement,
+  text: string,
+  rootState: SubtitleRootState
+): Promise<void> {
+  const requestId = rootState.translationRequestId + 1;
+  rootState.translationRequestId = requestId;
+  rootState.translation = null;
+  rootState.translationError = null;
+
+  try {
+    const translation = await translateSubtitleLine(text);
+
+    if (rootState.translationRequestId !== requestId || rootState.lastRenderedText !== text) {
+      return;
+    }
+
+    rootState.translation = translation;
+    renderInteractiveSubtitle(element, text, rootState);
+  } catch {
+    if (rootState.translationRequestId !== requestId || rootState.lastRenderedText !== text) {
+      return;
+    }
+
+    rootState.translationError = "Local translation backend unavailable.";
+    renderInteractiveSubtitle(element, text, rootState);
+  }
 }
 
 function showTooltip(): void {
@@ -709,7 +880,7 @@ function speak(text: string): void {
   }
 
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "ko-KR";
+  utterance.lang = "en-US";
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(utterance);
 }

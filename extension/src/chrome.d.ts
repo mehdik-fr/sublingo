@@ -13,6 +13,8 @@ declare namespace chrome {
     const onMessage: {
       addListener(listener: MessageListener): void;
     };
+
+    function sendMessage(message: unknown): Promise<unknown>;
   }
 
   namespace storage {

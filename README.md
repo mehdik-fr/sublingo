@@ -44,7 +44,11 @@ npm run build
 
 Then load the `extension/` folder from `chrome://extensions`.
 
-The popup now exposes a small live status view for the current page and a real enable/disable toggle backed by extension storage.
+The popup exposes a minimal active/inactive toggle backed by extension storage.
+
+When the local backend is running, the extension can request a full-line French-to-English translation from Argos Translate. The tooltip also displays a first token-level translation when the backend can provide one.
+
+This local backend is an integration experiment. It proves the extension can call an external translation layer, but it is not the final turnkey architecture because it requires a Python process and local model setup.
 
 ## Planned MVP
 
@@ -52,18 +56,20 @@ The popup now exposes a small live status view for the current page and a real e
 - Subtitle detection on a local test page, then YouTube watch pages
 - Interactive words and expressions
 - Minimal tooltip with translation details
-- Small local French/Korean dictionary for the first version
+- Small local French/English dictionary for the first version
 - Python API later for context-aware language help
 
 ## Tech Direction
 
 - TypeScript for the browser extension
-- Python and FastAPI for the future NLP backend
+- Python and FastAPI for the translation backend
+- Argos Translate as the first local integration experiment
+- Hosted open-weight model inference as the target product direction
 - Lightweight tests as soon as core parsing logic appears
 
 ## Status
 
-Local subtitle prototype complete. First real-page YouTube adapter in progress.
+Local subtitle prototype complete. YouTube caption detection and local backend integration are in progress.
 
 ## Roadmap
 

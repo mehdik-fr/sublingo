@@ -29,8 +29,17 @@ At this stage, YouTube support is intentionally narrow:
 - visible native captions required
 - local dictionary only, no remote translation provider yet
 
-The extension popup now shows:
+The extension popup keeps a minimal product surface:
 
-- whether Sublingo is enabled
-- whether the current page is supported
-- whether a subtitle layer has been detected on the current page
+- active/inactive state
+- one toggle to enable or pause the subtitle overlay
+
+## Local Backend
+
+The content script can call the local backend at:
+
+```txt
+http://127.0.0.1:8765/translate-line
+```
+
+The backend currently uses Argos Translate for French-to-English translation when the local model is installed.
