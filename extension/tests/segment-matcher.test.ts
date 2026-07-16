@@ -45,6 +45,7 @@ function createSegment(
     kind,
     normalizedForm: null,
     romanization: null,
+    confidence: null,
     scriptVariants: [],
     translations: [
       {

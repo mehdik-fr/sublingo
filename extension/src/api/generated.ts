@@ -156,6 +156,8 @@ export interface components {
             normalizedForm?: string | null;
             /** Romanization */
             romanization?: string | null;
+            /** Confidence */
+            confidence?: number | null;
             /** Scriptvariants */
             scriptVariants?: components["schemas"]["ScriptVariantResponse"][];
             /** Translations */
@@ -196,6 +198,10 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
     };
     responses: never;

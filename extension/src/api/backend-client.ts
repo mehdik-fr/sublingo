@@ -210,6 +210,7 @@ function isSegment(value: unknown): boolean {
     ["word", "expression", "punctuation", "whitespace"].includes(String(value.kind)) &&
     isOptionalString(value.normalizedForm) &&
     isOptionalString(value.romanization) &&
+    isOptionalConfidence(value.confidence) &&
     isOptionalArray(value.scriptVariants, isScriptVariant) &&
     Array.isArray(value.translations) &&
     value.translations.every(isTranslation) &&
@@ -227,6 +228,14 @@ function isGrammarFeature(value: unknown): boolean {
 
 function isOptionalString(value: unknown): boolean {
   return value === undefined || value === null || typeof value === "string";
+}
+
+function isOptionalConfidence(value: unknown): boolean {
+  return (
+    value === undefined ||
+    value === null ||
+    (typeof value === "number" && value >= 0 && value <= 1)
+  );
 }
 
 function isOptionalArray(value: unknown, validator: (item: unknown) => boolean): boolean {

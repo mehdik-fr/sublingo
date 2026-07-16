@@ -68,6 +68,7 @@ class SegmentAnalysisResponse(ApiModel):
     kind: Literal["word", "expression", "punctuation", "whitespace"]
     normalized_form: str | None = None
     romanization: str | None = None
+    confidence: float | None = Field(default=None, ge=0, le=1)
     script_variants: list[ScriptVariantResponse] = Field(default_factory=list)
     translations: list[TranslationCandidateResponse] = Field(default_factory=list)
     grammar: list[GrammaticalFeatureResponse] = Field(default_factory=list)

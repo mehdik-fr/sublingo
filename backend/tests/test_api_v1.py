@@ -15,7 +15,7 @@ from app.domain.analysis import (
     TranslationKind,
 )
 from app.main import create_app
-from app.providers.base import ProviderError
+from app.providers.base import InvalidProviderOutputError, ProviderError
 from app.services.subtitle_analysis import SubtitleAnalysisService
 
 
@@ -24,7 +24,7 @@ class FakeAnalysisProvider:
     def metadata(self) -> ProviderMetadata:
         return ProviderMetadata(name="fake", model="test-model", revision="1")
 
-    def analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
+    async def analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
         return tuple(
             AnalyzedCue(
                 cue_id=cue.cue_id,
@@ -44,6 +44,7 @@ class FakeAnalysisProvider:
                         kind=SegmentKind.EXPRESSION,
                         normalized_form=cue.text.lower(),
                         romanization="sample",
+                        confidence=0.8,
                         script_variants=(ScriptVariant(script="Latn", text=cue.text),),
                         translations=(
                             TranslationCandidate(
@@ -58,27 +59,32 @@ class FakeAnalysisProvider:
             for cue in batch.cues
         )
 
-    def check_readiness(self) -> None:
+    async def check_readiness(self) -> None:
         return None
 
 
 class FailingAnalysisProvider(FakeAnalysisProvider):
-    def analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
+    async def analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
         raise ProviderError("provider failure")
 
 
+class InvalidOutputAnalysisProvider(FakeAnalysisProvider):
+    async def analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
+        raise InvalidProviderOutputError("invalid structured output")
+
+
 class UnreadyAnalysisProvider(FakeAnalysisProvider):
-    def check_readiness(self) -> None:
+    async def check_readiness(self) -> None:
         raise ProviderError("runtime unavailable")
 
 
 class IncompleteAnalysisProvider(FakeAnalysisProvider):
-    def analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
+    async def analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
         return ()
 
 
 class MissingPrimaryTranslationProvider(FakeAnalysisProvider):
-    def analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
+    async def analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
         return tuple(
             AnalyzedCue(
                 cue_id=cue.cue_id,
@@ -95,7 +101,7 @@ class MissingPrimaryTranslationProvider(FakeAnalysisProvider):
 
 
 class MissingSegmentProvider(FakeAnalysisProvider):
-    def analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
+    async def analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
         return tuple(
             AnalyzedCue(
                 cue_id=cue.cue_id,
@@ -231,6 +237,7 @@ class SubtitleAnalysisApiTests(unittest.TestCase):
             },
         )
         self.assertEqual(payload["cues"][0]["segments"][0]["kind"], "expression")
+        self.assertEqual(payload["cues"][0]["segments"][0]["confidence"], 0.8)
         self.assertEqual(
             payload["cues"][0]["segments"][0]["scriptVariants"],
             [{"script": "Latn", "text": "Bonjour le monde"}],
@@ -291,6 +298,36 @@ class SubtitleAnalysisApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json(), {"detail": "Analysis provider unavailable"})
+
+    def test_maps_invalid_structured_output_to_bad_gateway(self) -> None:
+        response = create_client(InvalidOutputAnalysisProvider()).post(
+            "/v1/subtitles/analyze",
+            json={
+                "schemaVersion": "1.0",
+                "sourceLanguage": "fr",
+                "targetLanguage": "en",
+                "cues": [{"cueId": "cue-1", "text": "Bonjour"}],
+            },
+        )
+
+        self.assertEqual(response.status_code, 502)
+        self.assertEqual(response.json(), {"detail": "Analysis provider returned invalid data"})
+
+    def test_rate_limits_analysis_without_logging_or_processing_extra_body(self) -> None:
+        settings = Settings(rate_limit_requests_per_minute=1)
+        client = create_client(FakeAnalysisProvider(), settings=settings)
+        payload = {
+            "schemaVersion": "1.0",
+            "sourceLanguage": "fr",
+            "targetLanguage": "en",
+            "cues": [{"cueId": "cue-1", "text": "Bonjour"}],
+        }
+
+        self.assertEqual(client.post("/v1/subtitles/analyze", json=payload).status_code, 200)
+        limited = client.post("/v1/subtitles/analyze", json=payload)
+
+        self.assertEqual(limited.status_code, 429)
+        self.assertEqual(limited.headers["Retry-After"], "1")
 
     def test_rejects_incomplete_provider_output(self) -> None:
         response = create_client(IncompleteAnalysisProvider()).post(

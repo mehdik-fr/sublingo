@@ -1,5 +1,25 @@
 [
   {
+    "id": "qwen3.5-9b",
+    "ollamaName": null,
+    "upstreamModel": "Qwen/Qwen3.5-9B",
+    "revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+    "license": "Apache-2.0",
+    "commercialUse": true,
+    "expectedSizeGB": 19.3,
+    "source": "https://huggingface.co/Qwen/Qwen3.5-9B"
+  },
+  {
+    "id": "qwen3-14b",
+    "ollamaName": null,
+    "upstreamModel": "Qwen/Qwen3-14B",
+    "revision": "40c069824f4251a91eefaf281ebe4c544efd3e18",
+    "license": "Apache-2.0",
+    "commercialUse": true,
+    "expectedSizeGB": 29.6,
+    "source": "https://huggingface.co/Qwen/Qwen3-14B"
+  },
+  {
     "ollamaName": "qwen2.5:7b",
     "upstreamModel": "Qwen/Qwen2.5-7B-Instruct",
     "license": "Apache-2.0",

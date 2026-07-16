@@ -1000,6 +1000,7 @@ function applySettings(settings: ExtensionSettings): void {
   }
 
   if (didEnabledChange) {
+    clearSubtitleTranslationCache();
     syncPlatform();
     return;
   }

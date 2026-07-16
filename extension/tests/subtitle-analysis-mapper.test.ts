@@ -22,6 +22,7 @@ test("preserves complete API segment metadata for the word card", () => {
           kind: "expression",
           normalizedForm: "안녕하다",
           romanization: "annyeonghaseyo",
+          confidence: 0.91,
           scriptVariants: [{ script: "Hang", text: "안녕하세요" }],
           translations: [
             { text: "Hi", kind: "literal", isPrimary: false },
@@ -37,6 +38,7 @@ test("preserves complete API segment metadata for the word card", () => {
 
   assert.equal(translation.provider, "ollama:licensed-model");
   assert.equal(translation.segments[0].romanization, "annyeonghaseyo");
+  assert.equal(translation.segments[0].confidence, 0.91);
   assert.equal(translation.segments[0].translations.length, 2);
   assert.deepEqual(translation.segments[0].grammar, [
     { name: "speechLevel", value: "polite" }

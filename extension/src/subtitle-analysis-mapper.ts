@@ -23,6 +23,7 @@ export type SubtitleSegmentAnalysis = {
   kind: "word" | "expression" | "punctuation" | "whitespace";
   normalizedForm: string | null;
   romanization: string | null;
+  confidence: number | null;
   scriptVariants: SubtitleScriptVariant[];
   translations: SubtitleTranslationCandidate[];
   grammar: SubtitleGrammarFeature[];
@@ -54,6 +55,7 @@ export function mapSubtitleAnalysis(result: SubtitleAnalysisResult): SubtitleTra
       kind: segment.kind,
       normalizedForm: segment.normalizedForm ?? null,
       romanization: segment.romanization ?? null,
+      confidence: segment.confidence ?? null,
       scriptVariants: segment.scriptVariants ?? [],
       translations: (segment.translations ?? []).map((translation) => ({
         text: translation.text,

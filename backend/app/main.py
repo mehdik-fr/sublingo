@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import router as v1_router
 from app.core.config import Settings
-from app.middleware import RequestBodyLimitMiddleware
+from app.middleware import RateLimitMiddleware, RequestBodyLimitMiddleware
 from app.models import HealthResponse, ReadinessResponse
 from app.providers.factory import create_analysis_provider
 from app.services.subtitle_analysis import ProviderUnavailableError, SubtitleAnalysisService
@@ -43,6 +43,10 @@ def create_app(
     application.add_middleware(
         RequestBodyLimitMiddleware,
         max_body_bytes=resolved_settings.max_request_body_bytes,
+    )
+    application.add_middleware(
+        RateLimitMiddleware,
+        requests_per_minute=resolved_settings.rate_limit_requests_per_minute,
     )
     application.include_router(v1_router)
 
@@ -81,11 +85,11 @@ def create_app(
         response_model=ReadinessResponse,
         responses={status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ReadinessResponse}},
     )
-    def readiness(request: Request):
+    async def readiness(request: Request):
         service: SubtitleAnalysisService = request.app.state.analysis_service
 
         try:
-            service.check_readiness()
+            await service.check_readiness()
         except ProviderUnavailableError:
             return JSONResponse(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

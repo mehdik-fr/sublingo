@@ -29,7 +29,7 @@ def get_analysis_service(request: Request) -> SubtitleAnalysisService:
     response_model=AnalyzeSubtitlesResponse,
     response_model_exclude_none=True,
 )
-def analyze_subtitles(
+async def analyze_subtitles(
     payload: AnalyzeSubtitlesRequest,
     service: SubtitleAnalysisService = Depends(get_analysis_service),
 ) -> AnalyzeSubtitlesResponse:
@@ -48,7 +48,7 @@ def analyze_subtitles(
     )
 
     try:
-        result = service.analyze(batch)
+        result = await service.analyze(batch)
     except ProviderUnavailableError as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -94,6 +94,7 @@ def to_response(result: AnalysisResult) -> AnalyzeSubtitlesResponse:
                         kind=segment.kind.value,
                         normalized_form=segment.normalized_form,
                         romanization=segment.romanization,
+                        confidence=segment.confidence,
                         script_variants=[
                             ScriptVariantResponse(script=variant.script, text=variant.text)
                             for variant in segment.script_variants

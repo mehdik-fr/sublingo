@@ -1,7 +1,11 @@
 from uuid import uuid4
 
 from app.domain.analysis import AnalysisBatch, AnalysisResult, SegmentKind
-from app.providers.base import AnalysisProvider, ProviderError
+from app.providers.base import (
+    AnalysisProvider,
+    InvalidProviderOutputError,
+    ProviderError,
+)
 
 
 class ProviderUnavailableError(RuntimeError):
@@ -16,9 +20,11 @@ class SubtitleAnalysisService:
     def __init__(self, provider: AnalysisProvider) -> None:
         self._provider = provider
 
-    def analyze(self, batch: AnalysisBatch) -> AnalysisResult:
+    async def analyze(self, batch: AnalysisBatch) -> AnalysisResult:
         try:
-            cues = self._provider.analyze_batch(batch)
+            cues = await self._provider.analyze_batch(batch)
+        except InvalidProviderOutputError as error:
+            raise InvalidProviderResponseError("Analysis provider returned invalid data") from error
         except ProviderError as error:
             raise ProviderUnavailableError("Analysis provider unavailable") from error
 
@@ -82,13 +88,13 @@ class SubtitleAnalysisService:
     def provider_name(self) -> str:
         return self._provider.metadata.name
 
-    def check_readiness(self) -> None:
+    async def check_readiness(self) -> None:
         checker = getattr(self._provider, "check_readiness", None)
 
         if checker is None:
             return
 
         try:
-            checker()
+            await checker()
         except ProviderError as error:
             raise ProviderUnavailableError("Analysis provider unavailable") from error

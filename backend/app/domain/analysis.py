@@ -57,6 +57,7 @@ class AnalyzedSegment:
     translations: tuple[TranslationCandidate, ...] = field(default_factory=tuple)
     normalized_form: str | None = None
     romanization: str | None = None
+    confidence: float | None = None
     script_variants: tuple[ScriptVariant, ...] = field(default_factory=tuple)
     grammar: tuple[GrammaticalFeature, ...] = field(default_factory=tuple)
 

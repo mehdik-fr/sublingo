@@ -1,0 +1,663 @@
+{
+  "schemaVersion": "1.0",
+  "model": {
+    "id": "qwen3.5-9b",
+    "ollamaName": null,
+    "upstreamModel": "Qwen/Qwen3.5-9B",
+    "revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+    "license": "Apache-2.0",
+    "commercialUse": true,
+    "expectedSizeGB": 19.3,
+    "source": "https://huggingface.co/Qwen/Qwen3.5-9B"
+  },
+  "provider": "vllm",
+  "environment": "runpod-eu-se-a40",
+  "gpu": {
+    "name": "NVIDIA_A40",
+    "vramGB": 48.0
+  },
+  "caseCount": 8,
+  "repeatCount": 3,
+  "requestCount": 12,
+  "elapsedSeconds": 380.079,
+  "modelLoadSeconds": 151.0,
+  "warmupLatencySeconds": [
+    42.22
+  ],
+  "timeToFirstResultSeconds": 42.218,
+  "batchLatencySeconds": [
+    42.218,
+    40.136,
+    13.258,
+    16.836,
+    42.238,
+    40.166,
+    13.29,
+    16.847,
+    42.33,
+    40.245,
+    13.313,
+    16.886
+  ],
+  "batchLatencyP50Seconds": 40.136,
+  "batchLatencyP95Seconds": 42.238,
+  "perCueLatencyP50Seconds": 20.068,
+  "perCueLatencyP95Seconds": 21.119,
+  "cuesPerSecond": 0.071,
+  "outputBytes": 6732,
+  "hourlyCostUSD": 0.44,
+  "estimatedInferenceCostUSD": 0.041282,
+  "structuredOutputRate": 1.0,
+  "exactCueIdRate": 1.0,
+  "expectedSignalRecall": 0.7222222222222222,
+  "segmentRecall": 0.5,
+  "partOfSpeechAccuracy": 0.7142857142857143,
+  "romanizationAccuracy": 0.8,
+  "results": [
+    {
+      "id": "fr-en-literal",
+      "translation": "Look at the colors more closely.",
+      "matchedSignals": [
+        "look",
+        "colors",
+        "closely"
+      ],
+      "segments": [
+        {
+          "surface": "Regardez",
+          "kind": "word",
+          "normalizedForm": "regarder",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "Look"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "verb"
+            }
+          ]
+        },
+        {
+          "surface": "les",
+          "kind": "word",
+          "normalizedForm": "le",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "the"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "determiner"
+            }
+          ]
+        },
+        {
+          "surface": "couleurs",
+          "kind": "word",
+          "normalizedForm": "couleur",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "colors"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "noun"
+            }
+          ]
+        },
+        {
+          "surface": "de",
+          "kind": "word",
+          "normalizedForm": "de",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "-"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "preposition"
+            }
+          ]
+        },
+        {
+          "surface": "plus",
+          "kind": "word",
+          "normalizedForm": "plus",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "more"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "adverb"
+            }
+          ]
+        },
+        {
+          "surface": "près",
+          "kind": "word",
+          "normalizedForm": "près",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "closely"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "adverb"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fr-en-idiom",
+      "translation": "He stood his friend up.",
+      "matchedSignals": [
+        "stood",
+        "friend"
+      ],
+      "segments": [
+        {
+          "surface": "Il",
+          "kind": "word",
+          "normalizedForm": "il",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "He"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "pronoun"
+            }
+          ]
+        },
+        {
+          "surface": "a",
+          "kind": "word",
+          "normalizedForm": "avoir",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "-"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "verb"
+            }
+          ]
+        },
+        {
+          "surface": "posé",
+          "kind": "word",
+          "normalizedForm": "poser",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "-"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "verb"
+            }
+          ]
+        },
+        {
+          "surface": "un",
+          "kind": "word",
+          "normalizedForm": "un",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "-"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "determiner"
+            }
+          ]
+        },
+        {
+          "surface": "lapin",
+          "kind": "word",
+          "normalizedForm": "lapin",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "-"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "noun"
+            }
+          ]
+        },
+        {
+          "surface": "à",
+          "kind": "word",
+          "normalizedForm": "à",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "-"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "preposition"
+            }
+          ]
+        },
+        {
+          "surface": "son",
+          "kind": "word",
+          "normalizedForm": "son",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "-"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "determiner"
+            }
+          ]
+        },
+        {
+          "surface": "ami",
+          "kind": "word",
+          "normalizedForm": "ami",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "friend"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "noun"
+            }
+          ]
+        },
+        {
+          "surface": ".",
+          "kind": "punctuation",
+          "normalizedForm": ".",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "."
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "particle"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "en-fr-ambiguous",
+      "translation": "I booked a table by the bank.",
+      "matchedSignals": [
+        "table"
+      ],
+      "segments": [
+        {
+          "surface": "I",
+          "kind": "word",
+          "normalizedForm": "I",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "Je"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "pronoun"
+            }
+          ]
+        },
+        {
+          "surface": "booked",
+          "kind": "word",
+          "normalizedForm": "book",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "ai réservé"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "verb"
+            }
+          ]
+        },
+        {
+          "surface": "a",
+          "kind": "word",
+          "normalizedForm": "a",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "une"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "determiner"
+            }
+          ]
+        },
+        {
+          "surface": "table",
+          "kind": "word",
+          "normalizedForm": "table",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "table"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "noun"
+            }
+          ]
+        },
+        {
+          "surface": "by",
+          "kind": "word",
+          "normalizedForm": "by",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "près de"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "preposition"
+            }
+          ]
+        },
+        {
+          "surface": "the",
+          "kind": "word",
+          "normalizedForm": "the",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "la"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "determiner"
+            }
+          ]
+        },
+        {
+          "surface": "bank",
+          "kind": "word",
+          "normalizedForm": "bank",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "rive",
+            "banque"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "noun"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "en-fr-phrasal",
+      "translation": "She gave up too quickly.",
+      "matchedSignals": [],
+      "segments": [
+        {
+          "surface": "She",
+          "kind": "word",
+          "normalizedForm": "she",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "Elle"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "pronoun"
+            }
+          ]
+        },
+        {
+          "surface": "gave up",
+          "kind": "expression",
+          "normalizedForm": "give up",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "a abandonné"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "verb"
+            }
+          ]
+        },
+        {
+          "surface": "too",
+          "kind": "word",
+          "normalizedForm": "too",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "trop"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "adverb"
+            }
+          ]
+        },
+        {
+          "surface": "quickly",
+          "kind": "word",
+          "normalizedForm": "quickly",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "vite"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "adverb"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ko-en-polite",
+      "translation": "Hello.",
+      "matchedSignals": [
+        "hello"
+      ],
+      "segments": [
+        {
+          "surface": "안녕하세요.",
+          "kind": "word",
+          "normalizedForm": "annyeonghaseyo",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "Hello."
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "interjection"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ko-en-expression",
+      "translation": "I have high standards / I'm picky.",
+      "matchedSignals": [
+        "high",
+        "standards"
+      ],
+      "segments": [
+        {
+          "surface": "눈이",
+          "kind": "word",
+          "normalizedForm": "nun-i",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "eyes"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "noun"
+            }
+          ]
+        },
+        {
+          "surface": "높아요.",
+          "kind": "expression",
+          "normalizedForm": "nopayo",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "high"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "adjective"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "en-ko-greeting",
+      "translation": "만나서 반갑습니다.",
+      "matchedSignals": [
+        "만나서"
+      ],
+      "segments": [
+        {
+          "surface": "Nice to meet you.",
+          "kind": "expression",
+          "normalizedForm": null,
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "만나서 반갑습니다."
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "interjection"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "en-ko-verb",
+      "translation": "아이들이 밖에 뛰고 있어요.",
+      "matchedSignals": [
+        "아이들",
+        "밖",
+        "뛰"
+      ],
+      "segments": [
+        {
+          "surface": "children",
+          "kind": "word",
+          "normalizedForm": "child",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "아이들"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "noun"
+            }
+          ]
+        },
+        {
+          "surface": "are running",
+          "kind": "expression",
+          "normalizedForm": "run",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "뛰고 있어요"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "verb"
+            }
+          ]
+        },
+        {
+          "surface": "outside",
+          "kind": "word",
+          "normalizedForm": "outside",
+          "romanization": null,
+          "confidence": null,
+          "translations": [
+            "밖에"
+          ],
+          "grammar": [
+            {
+              "name": "partOfSpeech",
+              "value": "adverb"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
