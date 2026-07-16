@@ -1,5 +1,6 @@
 import {
   clearSubtitleTranslationCache,
+  SubtitleTranslationError,
   translateSubtitleLine,
   type SubtitleTranslation
 } from "./translation-client";
@@ -15,6 +16,8 @@ const INLINE_STYLE_ID = "sublingo-inline-styles";
 const SUBTITLE_ROOT_ATTRIBUTE = "data-sublingo-subtitle-root";
 const TOKEN_ATTRIBUTE = "data-sublingo-token";
 const PLAIN_ATTRIBUTE = "data-sublingo-plain";
+const STATUS_ATTRIBUTE = "data-sublingo-status";
+const STATUS_LABEL_ATTRIBUTE = "data-sublingo-status-label";
 const SETTINGS_KEY = "settings";
 
 type ExtensionSettings = {
@@ -26,8 +29,18 @@ type ExtensionSettings = {
 type PlatformAdapter = {
   id: "demo" | "youtube";
   matches: () => boolean;
+  getNavigationKey: () => string;
+  getObservationTarget: () => Node | null;
   getSubtitleRoots: () => HTMLElement[];
 };
+
+type SubtitleAnalysisStatus =
+  | "idle"
+  | "loading"
+  | "ready"
+  | "unavailable"
+  | "invalid"
+  | "empty";
 
 type SubtitleRootState = {
   isRendering: boolean;
@@ -36,6 +49,7 @@ type SubtitleRootState = {
   translation: SubtitleTranslation | null;
   translationError: string | null;
   translationRequestId: number;
+  analysisStatus: SubtitleAnalysisStatus;
 };
 
 type TokenTooltipData = {
@@ -49,9 +63,12 @@ type TokenTooltipData = {
 
 type ExtensionState = {
   activePlatformId: PlatformAdapter["id"] | null;
+  activeNavigationKey: string | null;
   demoTrackCleanup: (() => void) | null;
   isEnabled: boolean;
   pageObserver: MutationObserver | null;
+  pageObserverTarget: Node | null;
+  platformRetryTimer: number | null;
   rootStates: Map<HTMLElement, SubtitleRootState>;
   tooltipElement: HTMLElement | null;
   hideTooltipTimer: number | null;
@@ -70,6 +87,8 @@ const platforms: PlatformAdapter[] = [
         window.location.pathname.startsWith("/demo")
       );
     },
+    getNavigationKey: () => window.location.pathname,
+    getObservationTarget: () => document.querySelector("#subtitle"),
     getSubtitleRoots: () => {
       const subtitle = document.querySelector<HTMLElement>("#subtitle");
       return subtitle ? [subtitle] : [];
@@ -79,6 +98,15 @@ const platforms: PlatformAdapter[] = [
     id: "youtube",
     matches: () => {
       return window.location.hostname === "www.youtube.com" && window.location.pathname === "/watch";
+    },
+    getNavigationKey: () => {
+      return new URL(window.location.href).searchParams.get("v") ?? window.location.href;
+    },
+    getObservationTarget: () => {
+      return (
+        document.querySelector(".ytp-caption-window-container") ??
+        document.querySelector("#movie_player")
+      );
     },
     getSubtitleRoots: () => {
       return Array.from(
@@ -90,9 +118,12 @@ const platforms: PlatformAdapter[] = [
 
 const state: ExtensionState = {
   activePlatformId: null,
+  activeNavigationKey: null,
   demoTrackCleanup: null,
   isEnabled: true,
   pageObserver: null,
+  pageObserverTarget: null,
+  platformRetryTimer: null,
   rootStates: new Map(),
   tooltipElement: null,
   hideTooltipTimer: null,
@@ -272,6 +303,26 @@ function ensureSubtitleStyles(): void {
       background: rgba(15, 118, 110, 0.46);
       text-decoration-color: #ffffff;
     }
+
+    [${SUBTITLE_ROOT_ATTRIBUTE}][${STATUS_LABEL_ATTRIBUTE}]::after {
+      background: rgba(15, 23, 42, 0.82);
+      border-radius: 999px;
+      color: rgba(255, 255, 255, 0.88);
+      content: attr(${STATUS_LABEL_ATTRIBUTE});
+      display: inline-block;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      font-size: 0.42em;
+      font-weight: 600;
+      line-height: 1;
+      margin-left: 0.65em;
+      padding: 0.32em 0.48em;
+      vertical-align: middle;
+    }
+
+    [${SUBTITLE_ROOT_ATTRIBUTE}][${STATUS_ATTRIBUTE}="unavailable"]::after,
+    [${SUBTITLE_ROOT_ATTRIBUTE}][${STATUS_ATTRIBUTE}="invalid"]::after {
+      background: rgba(153, 27, 27, 0.9);
+    }
   `;
 
   document.head.append(style);
@@ -281,25 +332,21 @@ function attachGlobalEvents(): void {
   document.addEventListener("keydown", handleKeydown);
   document.addEventListener("click", handleDocumentClick, true);
   window.addEventListener("popstate", schedulePlatformSync);
+  window.addEventListener("yt-navigate-start", handlePlatformNavigationStart as EventListener);
   window.addEventListener("yt-navigate-finish", schedulePlatformSync as EventListener);
   chrome.storage.onChanged.addListener(handleStorageChanged);
 }
 
 function startPlatformWatcher(): void {
-  if (state.pageObserver) {
-    return;
-  }
-
   schedulePlatformSync();
+}
 
-  state.pageObserver = new MutationObserver(() => {
-    schedulePlatformSync();
-  });
-
-  state.pageObserver.observe(document.documentElement, {
-    childList: true,
-    subtree: true
-  });
+function handlePlatformNavigationStart(): void {
+  clearSubtitleTranslationCache();
+  disconnectSubtitleRoots(true);
+  disconnectPlatformObserver();
+  closePinnedTooltip();
+  state.activeNavigationKey = null;
 }
 
 function schedulePlatformSync(): void {
@@ -317,25 +364,37 @@ function schedulePlatformSync(): void {
 function syncPlatform(): void {
   if (!state.isEnabled) {
     disconnectSubtitleRoots(true);
+    disconnectPlatformObserver();
     disconnectDemoTrackBridge();
     state.activePlatformId = null;
+    state.activeNavigationKey = null;
     closePinnedTooltip();
     return;
   }
 
   const platform = platforms.find((candidate) => candidate.matches()) ?? null;
   const nextPlatformId = platform?.id ?? null;
+  const nextNavigationKey = platform?.getNavigationKey() ?? null;
 
-  if (nextPlatformId !== state.activePlatformId) {
+  if (
+    nextPlatformId !== state.activePlatformId ||
+    nextNavigationKey !== state.activeNavigationKey
+  ) {
+    clearSubtitleTranslationCache();
     disconnectSubtitleRoots(true);
+    disconnectPlatformObserver();
     disconnectDemoTrackBridge();
     closePinnedTooltip();
     state.activePlatformId = nextPlatformId;
+    state.activeNavigationKey = nextNavigationKey;
   }
 
   if (!platform) {
+    disconnectPlatformObserver();
     return;
   }
+
+  observePlatformTarget(platform);
 
   if (platform.id === "demo") {
     ensureDemoTrackBridge();
@@ -371,6 +430,36 @@ function syncPlatform(): void {
   }
 }
 
+function observePlatformTarget(platform: PlatformAdapter): void {
+  const target = platform.getObservationTarget();
+
+  if (target === state.pageObserverTarget) {
+    return;
+  }
+
+  disconnectPlatformObserver();
+
+  if (!target) {
+    state.platformRetryTimer = window.setTimeout(schedulePlatformSync, 500);
+    return;
+  }
+
+  state.pageObserverTarget = target;
+  state.pageObserver = new MutationObserver(schedulePlatformSync);
+  state.pageObserver.observe(target, { childList: true, subtree: true });
+}
+
+function disconnectPlatformObserver(): void {
+  state.pageObserver?.disconnect();
+  state.pageObserver = null;
+  state.pageObserverTarget = null;
+
+  if (state.platformRetryTimer !== null) {
+    window.clearTimeout(state.platformRetryTimer);
+    state.platformRetryTimer = null;
+  }
+}
+
 function disconnectSubtitleRoots(restorePlainText: boolean): void {
   for (const [element, rootState] of state.rootStates) {
     teardownSubtitleRoot(element, rootState, restorePlainText);
@@ -386,6 +475,8 @@ function teardownSubtitleRoot(
 ): void {
   rootState.observer.disconnect();
   element.removeAttribute(SUBTITLE_ROOT_ATTRIBUTE);
+  element.removeAttribute(STATUS_ATTRIBUTE);
+  element.removeAttribute(STATUS_LABEL_ATTRIBUTE);
 
   if (restorePlainText && rootState.lastRenderedText) {
     element.textContent = rootState.lastRenderedText;
@@ -452,7 +543,8 @@ function observeSubtitleRoot(element: HTMLElement): void {
     }),
     translation: null,
     translationError: null,
-    translationRequestId: 0
+    translationRequestId: 0,
+    analysisStatus: "idle"
   };
 
   rootState.observer.observe(element, {
@@ -478,6 +570,8 @@ function syncSubtitleRoot(element: HTMLElement): void {
     rootState.lastRenderedText = "";
     rootState.translation = null;
     rootState.translationError = null;
+    rootState.analysisStatus = "idle";
+    updateSubtitleStatus(element, rootState);
 
     if (state.pinnedToken && element.contains(state.pinnedToken)) {
       closePinnedTooltip();
@@ -536,6 +630,24 @@ function renderInteractiveSubtitle(
   }
 
   rootState.isRendering = false;
+  updateSubtitleStatus(element, rootState);
+}
+
+function updateSubtitleStatus(element: HTMLElement, rootState: SubtitleRootState): void {
+  const labels: Partial<Record<SubtitleAnalysisStatus, string>> = {
+    loading: "Sublingo…",
+    unavailable: "Sublingo unavailable",
+    invalid: "Invalid analysis",
+    empty: "No translation"
+  };
+  const label = labels[rootState.analysisStatus];
+  element.setAttribute(STATUS_ATTRIBUTE, rootState.analysisStatus);
+
+  if (label) {
+    element.setAttribute(STATUS_LABEL_ATTRIBUTE, label);
+  } else {
+    element.removeAttribute(STATUS_LABEL_ATTRIBUTE);
+  }
 }
 
 function createToken(entry: TokenTooltipData, label: string): HTMLElement {
@@ -670,6 +782,8 @@ async function requestSubtitleTranslation(
   rootState.translationRequestId = requestId;
   rootState.translation = null;
   rootState.translationError = null;
+  rootState.analysisStatus = "loading";
+  renderInteractiveSubtitle(element, text, rootState);
 
   try {
     const translation = await translateSubtitleLine(text, {
@@ -682,13 +796,24 @@ async function requestSubtitleTranslation(
     }
 
     rootState.translation = translation;
+    rootState.analysisStatus = translation.segments.length > 0 ? "ready" : "empty";
     renderInteractiveSubtitle(element, text, rootState);
-  } catch {
+  } catch (error) {
     if (rootState.translationRequestId !== requestId || rootState.lastRenderedText !== text) {
       return;
     }
 
-    rootState.translationError = "Subtitle analysis backend unavailable.";
+    if (error instanceof SubtitleTranslationError && error.code === "cancelled") {
+      rootState.analysisStatus = "idle";
+      return;
+    }
+
+    const invalidResponse =
+      error instanceof SubtitleTranslationError && error.code === "invalid-response";
+    rootState.analysisStatus = invalidResponse ? "invalid" : "unavailable";
+    rootState.translationError = invalidResponse
+      ? "Subtitle analysis returned invalid data."
+      : "Subtitle analysis backend unavailable.";
     renderInteractiveSubtitle(element, text, rootState);
   }
 }

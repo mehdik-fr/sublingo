@@ -42,7 +42,7 @@ npm install
 npm run build
 ```
 
-Then load the `extension/` folder from `chrome://extensions`.
+Then load the generated `extension/dist/` folder from `chrome://extensions`.
 
 The popup exposes a minimal active/inactive toggle backed by extension storage.
 
@@ -79,8 +79,11 @@ to self-hosted infrastructure and GPU capacity.
 Local subtitle prototype complete. The extension now uses the versioned batch API
 with client-side batching, serialized inference, stale-caption control, and caching.
 The end-to-end Ollama path works, but a simple CPU request took 73.5 seconds and
-segment granularity remains inconsistent. Hosted GPU and model/pipeline selection
-remain open. See [docs/hosted-inference-next-steps.md](docs/hosted-inference-next-steps.md).
+segment granularity remains inconsistent. The API is now container-ready and the
+extension has environment-specific local, staging, and production builds. Hosted
+GPU and model/pipeline selection remain open. See
+[docs/hosted-inference-next-steps.md](docs/hosted-inference-next-steps.md) and
+[docs/production-hosting-architecture.md](docs/production-hosting-architecture.md).
 
 ## Roadmap
 

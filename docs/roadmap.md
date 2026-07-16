@@ -66,7 +66,9 @@ Status: in progress. The versioned batch contract, provider protocol, generated
 TypeScript declarations, extension migration, guarded Ollama adapter, and local
 evaluation harness are now in place.
 
-- [ ] Replace the manually started local backend with a hosted backend target
+- [x] Make the extension backend target configurable for local, staging, and production builds
+- [x] Package a non-root backend container without model weights or downloads
+- [ ] Deploy a hosted backend target after explicit infrastructure approval
 - [x] Add a provider interface for translation engines
 - [x] Evaluate an already-installed open-weight instruction model for structured subtitle analysis
 - [ ] Benchmark shortlisted models on hosted GPU hardware
@@ -74,13 +76,18 @@ evaluation harness are now in place.
 
 ## Phase 12 - API-Only Product Data Path
 
-Status: next checkpoint. See [production-data-path-audit.md](production-data-path-audit.md).
+Status: API migration complete; real YouTube lifecycle validation remains. See
+[production-data-path-audit.md](production-data-path-audit.md).
 
 - [x] Remove the embedded dictionary from the production extension bundle
 - [x] Make API segments the only source for word and expression cards
 - [x] Keep deterministic fixtures only in automated tests
 - [x] Require a non-fixture provider outside tests
 - [ ] Validate the extension on real YouTube watch-page navigation
+- [x] Scope caption observation to the YouTube player and reset on SPA navigation
+- [x] Cancel obsolete backend requests on video, language, or activation changes
+- [ ] Recover cleanly after reactivation while a cancelled client request is still
+  executing in the inference runtime
 
 ## Phase 13 - Hosted Inference Strategy
 
@@ -88,13 +95,16 @@ Status: discovery required. The local end-to-end path works but is not fast or
 reliable enough for product use. See
 [hosted-inference-next-steps.md](hosted-inference-next-steps.md).
 
-- [ ] Define multilingual, bidirectional quality fixtures
+- [x] Define initial multilingual, bidirectional quality fixtures
 - [ ] Compare a single structured model, specialized pipeline, and hybrid fast-path
 - [ ] Measure word coverage, expressions, part of speech, and romanization
 - [ ] Establish warm p50/p95 latency and throughput targets
 - [ ] Estimate VRAM and hosting cost from measured GPU runs
 - [ ] Select only commercially compatible open-weight components
 - [ ] Host the backend independently from the developer computer
+
+The proposed production boundary and hosting comparison are in
+[production-hosting-architecture.md](production-hosting-architecture.md).
 
 ## Phase 11 - Cache and Language Analysis
 

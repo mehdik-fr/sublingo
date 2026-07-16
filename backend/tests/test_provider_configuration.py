@@ -27,6 +27,32 @@ class ProviderConfigurationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unsupported analysis provider"):
             Settings.from_environment({"SUBLINGO_ANALYSIS_PROVIDER": "development"})
 
+    def test_requires_restricted_cors_for_production(self) -> None:
+        with self.assertRaisesRegex(ValueError, "deployed extension origin"):
+            Settings.from_environment(
+                {
+                    "SUBLINGO_ENVIRONMENT": "production",
+                    "SUBLINGO_ALLOWED_ORIGINS": "",
+                }
+            )
+
+        settings = Settings.from_environment(
+            {
+                "SUBLINGO_ENVIRONMENT": "production",
+                "SUBLINGO_ALLOWED_ORIGINS": "chrome-extension://abcdefghijklmnopabcdefghijklmnop",
+            }
+        )
+
+        self.assertEqual(
+            settings.allowed_origins,
+            ("chrome-extension://abcdefghijklmnopabcdefghijklmnop",),
+        )
+        self.assertIsNone(settings.allowed_origin_regex)
+
+    def test_validates_request_size_configuration(self) -> None:
+        with self.assertRaisesRegex(ValueError, "at least 1024"):
+            Settings.from_environment({"SUBLINGO_MAX_REQUEST_BODY_BYTES": "100"})
+
 class OllamaAnalysisProviderTests(unittest.TestCase):
     def test_rejects_concurrent_inference_instead_of_building_a_cpu_backlog(self) -> None:
         provider = OllamaAnalysisProvider(

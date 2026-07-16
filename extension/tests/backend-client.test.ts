@@ -39,8 +39,11 @@ test("posts the generated v1 contract and validates the response", async () => {
 
   const response = await requestSubtitleAnalysis(
     request,
-    fetcher as typeof fetch,
-    "http://backend.test/v1/subtitles/analyze"
+    {
+      fetcher: fetcher as typeof fetch,
+      endpoint: "http://backend.test/v1/subtitles/analyze",
+      timeoutMs: 1_000
+    }
   );
 
   assert.deepEqual(receivedBody, request);
@@ -60,7 +63,7 @@ test("rejects a malformed backend response", async () => {
         targetLanguage: "en",
         cues: [{ cueId: "cue-1", text: "Bonjour." }]
       },
-      fetcher as typeof fetch
+      { fetcher: fetcher as typeof fetch, timeoutMs: 1_000 }
     ),
     /invalid payload/
   );
@@ -103,8 +106,123 @@ test("rejects malformed structured segment metadata", async () => {
         targetLanguage: "en",
         cues: [{ cueId: "cue-1", text: "안녕하세요" }]
       },
-      fetcher as typeof fetch
+      { fetcher: fetcher as typeof fetch, timeoutMs: 1_000 }
     ),
     /invalid payload/
+  );
+});
+
+test("times out a backend request instead of leaving it pending", async () => {
+  const fetcher = async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    return await new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
+    });
+  };
+
+  await assert.rejects(
+    requestSubtitleAnalysis(
+      {
+        schemaVersion: "1.0",
+        sourceLanguage: "fr",
+        targetLanguage: "en",
+        cues: [{ cueId: "cue-1", text: "Bonjour." }]
+      },
+      { fetcher: fetcher as typeof fetch, timeoutMs: 5 }
+    ),
+    (error: unknown) => {
+      return error instanceof Error &&
+        "code" in error &&
+        error.code === "timeout";
+    }
+  );
+});
+
+test("retries a transient hosted failure only within the configured bound", async () => {
+  let calls = 0;
+  const fetcher = async (): Promise<Response> => {
+    calls += 1;
+
+    if (calls === 1) {
+      return new Response(null, { status: 503 });
+    }
+
+    return new Response(
+      JSON.stringify({
+        schemaVersion: "1.0",
+        analysisId: "analysis-retried",
+        sourceLanguage: "fr",
+        targetLanguage: "en",
+        provider: { name: "fixture" },
+        cues: [{
+          cueId: "cue-1",
+          sourceText: "Bonjour.",
+          translations: [{ text: "Hello.", kind: "contextual", isPrimary: true }],
+          segments: []
+        }]
+      }),
+      { status: 200 }
+    );
+  };
+
+  const response = await requestSubtitleAnalysis(
+    {
+      schemaVersion: "1.0",
+      sourceLanguage: "fr",
+      targetLanguage: "en",
+      cues: [{ cueId: "cue-1", text: "Bonjour." }]
+    },
+    { fetcher: fetcher as typeof fetch, maxRetries: 1, timeoutMs: 1_000 }
+  );
+
+  assert.equal(calls, 2);
+  assert.equal(response.analysisId, "analysis-retried");
+});
+
+test("classifies malformed JSON as an invalid analysis response", async () => {
+  const fetcher = async (): Promise<Response> => {
+    return new Response("{not-json", { status: 200 });
+  };
+
+  await assert.rejects(
+    requestSubtitleAnalysis(
+      {
+        schemaVersion: "1.0",
+        sourceLanguage: "fr",
+        targetLanguage: "en",
+        cues: [{ cueId: "cue-1", text: "Bonjour." }]
+      },
+      { fetcher: fetcher as typeof fetch, timeoutMs: 1_000 }
+    ),
+    (error: unknown) => {
+      return error instanceof Error &&
+        "code" in error &&
+        error.code === "invalid-response";
+    }
+  );
+});
+
+test("honors a caller cancellation that happened before the request", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  const fetcher = async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    assert.equal(init?.signal?.aborted, true);
+    throw init?.signal?.reason;
+  };
+
+  await assert.rejects(
+    requestSubtitleAnalysis(
+      {
+        schemaVersion: "1.0",
+        sourceLanguage: "fr",
+        targetLanguage: "en",
+        cues: [{ cueId: "cue-1", text: "Bonjour." }]
+      },
+      { fetcher: fetcher as typeof fetch, signal: controller.signal, timeoutMs: 1_000 }
+    ),
+    (error: unknown) => {
+      return error instanceof Error &&
+        "code" in error &&
+        error.code === "cancelled";
+    }
   );
 });

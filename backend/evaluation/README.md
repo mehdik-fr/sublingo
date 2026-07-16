@@ -19,10 +19,14 @@ Run the complete small fixture set with:
 .\.venv\Scripts\python.exe -B evaluation\run_model_evaluation.py --model qwen2.5:7b
 ```
 
-The report includes latency, structured-output validity, primary translations,
-segments, and a deliberately simple expected-signal recall. Provider validation
-failures are emitted as structured reports with a zero validity rate. Human review
-remains required before selecting a product model.
+The default dataset is multilingual and bidirectional: French/English and
+English/Korean in both directions. It records expected word or expression surfaces,
+part of speech, and conditional romanization signals. The report includes per-batch
+latency, structured-output validity, primary translations, segment recall,
+part-of-speech accuracy, romanization accuracy, and a deliberately simple expected
+translation-signal recall. Provider validation failures are emitted as structured
+reports with a zero validity rate. Human review remains required before selecting a
+product model.
 
 On a CPU-only computer, latency is expected to be much higher than on the eventual
 hosted GPU. The local run is useful for contract and quality screening, not for

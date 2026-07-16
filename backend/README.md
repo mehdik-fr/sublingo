@@ -9,7 +9,8 @@ and translations are confined to automated tests and are not a production fallba
 
 ## Current Scope
 
-- Health check endpoint
+- Liveness endpoint at `GET /health`
+- Provider/model readiness endpoint at `GET /ready`
 - Versioned batch endpoint at `POST /v1/subtitles/analyze`
 - Provider-independent response contract with multilingual optional fields
 - Configurable local or hosted Ollama endpoint
@@ -27,9 +28,15 @@ and translations are confined to automated tests and are not a production fallba
   valid but unusable for interactive subtitle latency.
 - Word-level coverage and grammatical metadata remain inconsistent with the current
   model; model or pipeline strategy is not selected yet.
+- A real YouTube/Docker test returned valid interactive results in 81-89 seconds,
+  while two other generations were rejected after 88-139 seconds. Re-enabling the
+  extension during unfinished inference currently produces temporary HTTP 503
+  responses until the provider lock is released.
 - The target product architecture is a self-hosted backend using a commercially
   compatible open-weight model on GPU infrastructure.
-- Production authentication, rate limiting, caching, CORS, and observability are not implemented yet.
+- Production authentication, distributed rate limiting, backend caching, and full
+  metrics are not implemented yet. CORS, bounded request bodies, request IDs, and
+  metadata-only request logs now provide a minimum deployment baseline.
 
 ## Setup
 
@@ -67,11 +74,45 @@ Optional variables are `SUBLINGO_OLLAMA_BASE_URL` and
 with an explicit error if the requested model is absent. It never invokes a model
 download.
 
+Deployment variables:
+
+- `SUBLINGO_ENVIRONMENT`: `development`, `staging`, `production`, or `test`;
+- `SUBLINGO_ALLOWED_ORIGINS`: comma-separated exact origins; required for staging
+  and production;
+- `SUBLINGO_ALLOWED_ORIGIN_REGEX`: optional only when a reviewed regex is needed;
+- `SUBLINGO_MAX_REQUEST_BODY_BYTES`: defaults to 262144 bytes, large enough for the
+  maximum current OpenAPI batch while remaining bounded;
+- `SUBLINGO_ANALYSIS_PROVIDER`: currently only `ollama`; paid providers are rejected;
+- `SUBLINGO_OLLAMA_BASE_URL`, `SUBLINGO_OLLAMA_MODEL`, and
+  `SUBLINGO_OLLAMA_TIMEOUT_SECONDS`: transitional inference settings.
+
+Request logs contain only request ID, method, path, status, and duration. Subtitle
+text and YouTube history are not logged.
+
 Then open:
 
 ```txt
 http://127.0.0.1:8765/health
 ```
+
+`/health` never contacts the inference runtime. `/ready` checks that the configured
+runtime is reachable and that the configured model is already installed; it still
+never downloads a model.
+
+## Container build
+
+The root Dockerfile packages only the API. It runs as a non-root user and contains
+no model weights:
+
+```powershell
+docker build --tag sublingo-backend:local .
+```
+
+Production configuration is illustrated in `backend.env.example`. Staging and
+production require an exact `SUBLINGO_ALLOWED_ORIGINS` value for the deployed Chrome
+extension. The inference endpoint should eventually be private; the current Ollama
+configuration is a transitional provider until the GPU serving benchmark selects a
+production adapter.
 
 ## Analyze A Subtitle Batch
 
@@ -105,3 +146,5 @@ The local Ollama evaluation harness only accepts registered, commercially compat
 models that are already installed. See [evaluation/README.md](evaluation/README.md).
 The hosted architecture questions and benchmark requirements are documented in
 [../docs/hosted-inference-next-steps.md](../docs/hosted-inference-next-steps.md).
+The proposed production service boundary and hosting options are documented in
+[../docs/production-hosting-architecture.md](../docs/production-hosting-architecture.md).

@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "1.0",
+  "cases": [
+    {
+      "id": "fr-en-literal",
+      "sourceLanguage": "fr",
+      "targetLanguage": "en",
+      "source": "Regardez les couleurs de plus près.",
+      "reference": "Look at the colors more closely.",
+      "expectedSignals": ["look", "colors", "closely"],
+      "expectedSegments": [
+        {"surface": "Regardez", "kind": "word", "partOfSpeech": "verb", "romanizationRequired": false},
+        {"surface": "couleurs", "kind": "word", "partOfSpeech": "noun", "romanizationRequired": false}
+      ]
+    },
+    {
+      "id": "fr-en-idiom",
+      "sourceLanguage": "fr",
+      "targetLanguage": "en",
+      "source": "Il a posé un lapin à son ami.",
+      "reference": "He stood his friend up.",
+      "expectedSignals": ["stood", "friend"],
+      "expectedSegments": [
+        {"surface": "posé un lapin", "kind": "expression", "partOfSpeech": "verb", "romanizationRequired": false}
+      ]
+    },
+    {
+      "id": "en-fr-ambiguous",
+      "sourceLanguage": "en",
+      "targetLanguage": "fr",
+      "source": "I booked a table by the bank.",
+      "reference": "J'ai réservé une table près de la banque.",
+      "expectedSignals": ["réservé", "table", "banque"],
+      "expectedSegments": [
+        {"surface": "booked", "kind": "word", "partOfSpeech": "verb", "romanizationRequired": false},
+        {"surface": "bank", "kind": "word", "partOfSpeech": "noun", "romanizationRequired": false}
+      ]
+    },
+    {
+      "id": "en-fr-phrasal",
+      "sourceLanguage": "en",
+      "targetLanguage": "fr",
+      "source": "She gave up too quickly.",
+      "reference": "Elle a abandonné trop vite.",
+      "expectedSignals": ["abandonné", "vite"],
+      "expectedSegments": [
+        {"surface": "gave up", "kind": "expression", "partOfSpeech": "verb", "romanizationRequired": false}
+      ]
+    },
+    {
+      "id": "ko-en-polite",
+      "sourceLanguage": "ko",
+      "targetLanguage": "en",
+      "source": "안녕하세요.",
+      "reference": "Hello.",
+      "expectedSignals": ["hello"],
+      "expectedSegments": [
+        {"surface": "안녕하세요", "kind": "word", "romanizationRequired": true}
+      ]
+    },
+    {
+      "id": "ko-en-expression",
+      "sourceLanguage": "ko",
+      "targetLanguage": "en",
+      "source": "눈이 높아요.",
+      "reference": "They have high standards.",
+      "expectedSignals": ["high", "standards"],
+      "expectedSegments": [
+        {"surface": "눈이 높아요", "kind": "expression", "romanizationRequired": true}
+      ]
+    },
+    {
+      "id": "en-ko-greeting",
+      "sourceLanguage": "en",
+      "targetLanguage": "ko",
+      "source": "Nice to meet you.",
+      "reference": "만나서 반가워요.",
+      "expectedSignals": ["만나서", "반가워요"],
+      "expectedSegments": [
+        {"surface": "Nice to meet you", "kind": "expression", "romanizationRequired": false}
+      ]
+    },
+    {
+      "id": "en-ko-verb",
+      "sourceLanguage": "en",
+      "targetLanguage": "ko",
+      "source": "The children are running outside.",
+      "reference": "아이들이 밖에서 뛰고 있어요.",
+      "expectedSignals": ["아이들", "밖", "뛰"],
+      "expectedSegments": [
+        {"surface": "running", "kind": "word", "partOfSpeech": "verb", "romanizationRequired": false}
+      ]
+    }
+  ]
+}

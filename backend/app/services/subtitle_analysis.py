@@ -77,3 +77,18 @@ class SubtitleAnalysisService:
             provider=self._provider.metadata,
             cues=cues,
         )
+
+    @property
+    def provider_name(self) -> str:
+        return self._provider.metadata.name
+
+    def check_readiness(self) -> None:
+        checker = getattr(self._provider, "check_readiness", None)
+
+        if checker is None:
+            return
+
+        try:
+            checker()
+        except ProviderError as error:
+            raise ProviderUnavailableError("Analysis provider unavailable") from error

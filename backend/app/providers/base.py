@@ -14,3 +14,6 @@ class AnalysisProvider(Protocol):
 
     def analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
         """Analyze a batch while preserving cue order and identifiers."""
+
+    def check_readiness(self) -> None:
+        """Raise ProviderError when the configured runtime or model is unavailable."""

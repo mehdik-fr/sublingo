@@ -5,7 +5,9 @@
   "description": "Browser extension for learning languages through interactive subtitles.",
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build --mode development",
+    "build:staging": "vite build --mode staging",
+    "build:production": "vite build --mode production",
     "contract:generate": "npm exec --yes --package=openapi-typescript@7.13.0 --package=typescript@5.9.3 -- openapi-typescript contracts/openapi.json -o extension/src/api/generated.ts",
     "contract:check": "npm exec --yes --package=openapi-typescript@7.13.0 --package=typescript@5.9.3 -- openapi-typescript contracts/openapi.json -o extension/src/api/generated.ts --check",
     "check:extension-bundle": "node scripts/check-extension-bundle.mjs",

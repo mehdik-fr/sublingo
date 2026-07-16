@@ -21,6 +21,13 @@ A real local smoke request using the already-installed `qwen2.5:7b` produced:
 
 This proves the complete data path, but not product viability.
 
+A later production-like manual checkpoint used the non-root Docker API against the
+same host Ollama runtime and a real YouTube TED video with native French captions.
+The extension successfully produced interactive analysis, but successful requests
+took 81-89 seconds and the segmentation remained too coarse. Two other model
+responses were rejected after 88 and 139 seconds with HTTP 502, confirming that
+schema validity is still inconsistent.
+
 ## Current limitations
 
 - Inference depends on the developer's local Ollama process and model installation.
@@ -36,8 +43,14 @@ This proves the complete data path, but not product viability.
   against a multilingual human-reviewed dataset.
 - The YouTube adapter is still an early visible-caption adapter and needs SPA,
   lifecycle, error-state, and multi-video validation.
+- Disabling Sublingo cancels the browser fetch but cannot stop an Ollama inference
+  already executing on the server. If the extension is re-enabled before that work
+  finishes, new requests receive HTTP 503 from the occupied provider lock and the UI
+  displays `Sublingo unavailable`. Recovery/backoff after reactivation remains a
+  known bug; it is intentionally not fixed in this checkpoint.
 - There is no independently hosted GPU backend, production authentication, rate
-  limiting, backend cache, or observability yet.
+  limiting, backend cache, or full metrics/dashboard stack yet. The current
+  metadata-only structured request logs are only an observability baseline.
 
 ## Required analysis output
 
@@ -146,3 +159,7 @@ hardware.
 
 No paid AI API is part of this plan. No new model weights or paid cloud resources
 may be downloaded or created without explicit approval.
+
+The proposed deployable service boundary, serving-engine direction, and current GPU
+hosting trade-offs are documented in
+[production-hosting-architecture.md](production-hosting-architecture.md).

@@ -1,7 +1,8 @@
 import type {
   AnalyzeSubtitlesRequest,
   AnalyzeSubtitlesResponse,
-  CueAnalysis
+  CueAnalysis,
+  SubtitleAnalysisErrorCode
 } from "./api/backend-client";
 import type { AnalyzeSubtitlesMessageResponse } from "./api/messages";
 import {
@@ -15,7 +16,18 @@ import {
 
 export type { SubtitleTranslation } from "./subtitle-analysis-mapper";
 
+export class SubtitleTranslationError extends Error {
+  readonly code: SubtitleAnalysisErrorCode;
+
+  constructor(message: string, code: SubtitleAnalysisErrorCode) {
+    super(message);
+    this.name = "SubtitleTranslationError";
+    this.code = code;
+  }
+}
+
 const analysisQueue = new SubtitleAnalysisQueue(sendBatchRequest);
+const activeRequestIds = new Set<string>();
 
 export async function translateSubtitleLine(
   text: string,
@@ -28,20 +40,36 @@ export async function translateSubtitleLine(
 
 export function clearSubtitleTranslationCache(): void {
   analysisQueue.clear();
+  activeRequestIds.forEach((requestId) => {
+    void chrome.runtime.sendMessage({
+      type: "SUBLINGO_CANCEL_SUBTITLE_ANALYSIS",
+      requestId
+    });
+  });
+  activeRequestIds.clear();
 }
 
 async function sendBatchRequest(request: AnalyzeSubtitlesRequest) {
-  const response = (await chrome.runtime.sendMessage({
-    type: "SUBLINGO_ANALYZE_SUBTITLES",
-    request
-  })) as unknown;
+  const requestId = crypto.randomUUID();
+  activeRequestIds.add(requestId);
+  let response: unknown;
+
+  try {
+    response = await chrome.runtime.sendMessage({
+      type: "SUBLINGO_ANALYZE_SUBTITLES",
+      requestId,
+      request
+    });
+  } finally {
+    activeRequestIds.delete(requestId);
+  }
 
   if (!isMessageResponse(response)) {
     throw new Error("Subtitle analysis bridge returned an invalid payload");
   }
 
   if (!response.ok) {
-    throw new Error(response.error);
+    throw new SubtitleTranslationError(response.error, response.errorCode);
   }
 
   return response.analysis;
@@ -56,7 +84,13 @@ function isMessageResponse(value: unknown): value is AnalyzeSubtitlesMessageResp
     return isAnalyzeSubtitlesResponse(value.analysis);
   }
 
-  return value.ok === false && typeof value.error === "string";
+  return (
+    value.ok === false &&
+    typeof value.error === "string" &&
+    ["cancelled", "invalid-response", "rejected", "timeout", "unavailable"].includes(
+      String(value.errorCode)
+    )
+  );
 }
 
 function isAnalyzeSubtitlesResponse(value: unknown): value is AnalyzeSubtitlesResponse {

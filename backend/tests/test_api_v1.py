@@ -2,6 +2,7 @@ import unittest
 
 from fastapi.testclient import TestClient
 
+from app.core.config import Settings
 from app.domain.analysis import (
     AnalysisBatch,
     AnalyzedCue,
@@ -57,10 +58,18 @@ class FakeAnalysisProvider:
             for cue in batch.cues
         )
 
+    def check_readiness(self) -> None:
+        return None
+
 
 class FailingAnalysisProvider(FakeAnalysisProvider):
     def analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
         raise ProviderError("provider failure")
+
+
+class UnreadyAnalysisProvider(FakeAnalysisProvider):
+    def check_readiness(self) -> None:
+        raise ProviderError("runtime unavailable")
 
 
 class IncompleteAnalysisProvider(FakeAnalysisProvider):
@@ -103,9 +112,12 @@ class MissingSegmentProvider(FakeAnalysisProvider):
         )
 
 
-def create_client(provider: FakeAnalysisProvider) -> TestClient:
+def create_client(
+    provider: FakeAnalysisProvider,
+    settings: Settings | None = None,
+) -> TestClient:
     service = SubtitleAnalysisService(provider)
-    return TestClient(create_app(service))
+    return TestClient(create_app(service, settings=settings))
 
 
 class SubtitleAnalysisApiTests(unittest.TestCase):
@@ -120,6 +132,66 @@ class SubtitleAnalysisApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok"})
+
+    def test_readiness_checks_the_configured_provider_without_inference(self) -> None:
+        response = create_client(FakeAnalysisProvider()).get("/ready")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ready", "provider": "fake"})
+
+    def test_readiness_reports_an_unavailable_provider(self) -> None:
+        response = create_client(UnreadyAnalysisProvider()).get("/ready")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json(), {"status": "not_ready", "provider": "fake"})
+
+    def test_echoes_a_safe_request_identifier(self) -> None:
+        response = create_client(FakeAnalysisProvider()).get(
+            "/health",
+            headers={"X-Request-ID": "test-request-42"},
+        )
+
+        self.assertEqual(response.headers["X-Request-ID"], "test-request-42")
+
+    def test_replaces_an_unsafe_request_identifier(self) -> None:
+        response = create_client(FakeAnalysisProvider()).get(
+            "/health",
+            headers={"X-Request-ID": "unsafe request id"},
+        )
+
+        self.assertNotEqual(response.headers["X-Request-ID"], "unsafe request id")
+        self.assertEqual(len(response.headers["X-Request-ID"]), 36)
+
+    def test_rejects_a_request_body_above_the_configured_limit(self) -> None:
+        settings = Settings(max_request_body_bytes=1024)
+        response = create_client(FakeAnalysisProvider(), settings=settings).post(
+            "/v1/subtitles/analyze",
+            content="x" * 1025,
+            headers={"Content-Type": "application/json"},
+        )
+
+        self.assertEqual(response.status_code, 413)
+        self.assertEqual(response.json(), {"detail": "Request body too large"})
+
+    def test_cors_allows_local_development_but_not_arbitrary_websites(self) -> None:
+        client = create_client(FakeAnalysisProvider())
+        allowed = client.options(
+            "/v1/subtitles/analyze",
+            headers={
+                "Origin": "http://localhost:8000",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+        denied = client.options(
+            "/v1/subtitles/analyze",
+            headers={
+                "Origin": "https://untrusted.example",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+
+        self.assertEqual(allowed.headers["access-control-allow-origin"], "http://localhost:8000")
+        self.assertNotIn("access-control-allow-origin", denied.headers)
 
     def test_analyzes_a_batch_with_camel_case_contract(self) -> None:
         response = create_client(FakeAnalysisProvider()).post(

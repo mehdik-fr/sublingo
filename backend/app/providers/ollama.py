@@ -113,6 +113,9 @@ class OllamaAnalysisProvider:
         finally:
             self._inference_lock.release()
 
+    def check_readiness(self) -> None:
+        self._ensure_model_is_installed(force=True)
+
     def _analyze_batch(self, batch: AnalysisBatch) -> tuple[AnalyzedCue, ...]:
         self._ensure_model_is_installed()
         request_body = {
@@ -182,8 +185,8 @@ class OllamaAnalysisProvider:
         except KeyError as error:
             raise ProviderError("Ollama returned an unknown cue identifier") from error
 
-    def _ensure_model_is_installed(self) -> None:
-        if self._model_is_available:
+    def _ensure_model_is_installed(self, *, force: bool = False) -> None:
+        if self._model_is_available and not force:
             return
 
         try:

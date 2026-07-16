@@ -1,13 +1,23 @@
-import type { AnalyzeSubtitlesRequest, AnalyzeSubtitlesResponse } from "./backend-client";
+import type {
+  AnalyzeSubtitlesRequest,
+  AnalyzeSubtitlesResponse,
+  SubtitleAnalysisErrorCode
+} from "./backend-client";
 
 export type AnalyzeSubtitlesMessage = {
   type: "SUBLINGO_ANALYZE_SUBTITLES";
+  requestId: string;
   request: AnalyzeSubtitlesRequest;
+};
+
+export type CancelSubtitleAnalysisMessage = {
+  type: "SUBLINGO_CANCEL_SUBTITLE_ANALYSIS";
+  requestId: string;
 };
 
 export type AnalyzeSubtitlesMessageResponse =
   | { ok: true; analysis: AnalyzeSubtitlesResponse }
-  | { ok: false; error: string };
+  | { ok: false; error: string; errorCode: SubtitleAnalysisErrorCode };
 
 export function isAnalyzeSubtitlesMessage(value: unknown): value is AnalyzeSubtitlesMessage {
   if (!isRecord(value) || value.type !== "SUBLINGO_ANALYZE_SUBTITLES") {
@@ -17,6 +27,7 @@ export function isAnalyzeSubtitlesMessage(value: unknown): value is AnalyzeSubti
   const request = value.request;
 
   return (
+    typeof value.requestId === "string" &&
     isRecord(request) &&
     request.schemaVersion === "1.0" &&
     typeof request.sourceLanguage === "string" &&
@@ -26,6 +37,16 @@ export function isAnalyzeSubtitlesMessage(value: unknown): value is AnalyzeSubti
     request.cues.every(
       (cue) => isRecord(cue) && typeof cue.cueId === "string" && typeof cue.text === "string"
     )
+  );
+}
+
+export function isCancelSubtitleAnalysisMessage(
+  value: unknown
+): value is CancelSubtitleAnalysisMessage {
+  return (
+    isRecord(value) &&
+    value.type === "SUBLINGO_CANCEL_SUBTITLE_ANALYSIS" &&
+    typeof value.requestId === "string"
   );
 }
 
